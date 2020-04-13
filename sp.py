@@ -7,18 +7,18 @@ import json
 def pp(x):
     print(json.dumps(x, indent=2, sort_keys=True))
 
+with open('config.json', 'r') as fp:
+    CFG = json.loads(fp.read())
+
+
 sp_scopes = "app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read"
 sp_redir_uri = "http://127.0.0.1:2000/test"
-# TODO read from config
-sp_username = ""
-sp_client_id = ""
-sp_client_secret = ""
 
 tok = util.prompt_for_user_token(
-        username=sp_username,
+        username=CFG["sp_username"],
         scope=sp_scopes,
-        client_id=sp_client_id,
-        client_secret=sp_client_secret,
+        client_id=CFG["sp_client_id"],
+        client_secret=CFG["sp_client_secret"],
         redirect_uri=sp_redir_uri)
 
 if not tok:
@@ -217,14 +217,17 @@ class SmallGenreMerger(GenreMerger):
         return True
 
 class GenreCustomRulesMerger(GenreMerger):
-    def __init__(self):
-        self._merge_map = {}
-        # TODO: Read from config
+    def __init__(self, merge_rules_map):
+        self._merge_map = merge_rules_map
 
     def apply_to(self, arts_idx):
-        for k in self._merge_map:
-            arts_idx.merge_subgenre_into_genre(k, self._merge_map[k])
-        return len(self._merge_map.keys())
+        cnt = 0
+        for rule in self._merge_map:
+            merge_to = rule["genre"]
+            for merge_from in rule["subgenres"]:
+                arts_idx.merge_subgenre_into_genre(merge_from, merge_to)
+                cnt += 1
+        return cnt
 
 
 sp = spotipy.Spotify(auth=tok)
@@ -235,7 +238,7 @@ SUBSET_SCORE_THRESHOLD = 0.5
 MAX_SUBGENRE_MERGE_SIZE = 20
 
 print("IDX has {} genres".format(len(idx.get_genres())))
-cnt = GenreCustomRulesMerger().apply_to(idx)
+cnt = GenreCustomRulesMerger(CFG["custom_genre_merge_rules"]).apply_to(idx)
 print("Removed {} genres".format(cnt))
 cnt = SmallGenreMerger(GENRE_MIN_SIZE).apply_to(idx)
 print("Removed {} genres".format(cnt))
