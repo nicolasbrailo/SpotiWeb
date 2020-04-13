@@ -1,0 +1,10 @@
+{
+  "sp_username": "your spotify username",
+  "sp_client_id": "spotify client id",
+  "sp_client_secret": "spotify client secret",
+  "custom_genre_merge_rules": [
+    {"genre": "genre1", "subgenres": ["list", "of", "small", "subgenres"]},
+    {"genre": "genre2", "subgenres": ["to", "group", "with", "parent", "genre"]}
+  ]
+}
+
