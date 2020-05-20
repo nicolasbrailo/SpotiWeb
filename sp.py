@@ -1,4 +1,5 @@
 import sys
+import os
 import pickle
 import spotipy
 import spotipy.util as util
@@ -44,12 +45,13 @@ class ArtistIndex(object):
             def map_art(a):
                 new = {}
                 new["name"] = a["name"].encode('utf-8')
-                new["uri"] = a["external_urls"]["spotify"]
+                new["uri"] = a["uri"] # a["external_urls"]["spotify"]
                 new["img"] = pick_image(a["images"], IMG_TARGET_SIDE_LENGTH)
                 new["genres"] = a["genres"]
                 return new
             return [map_art(x) for x in lst]
 
+        print("Start Spotify fetch")
         r = sp.current_user_followed_artists(limit=50)
         lst = map_artists(r["artists"]["items"])
         cont = r["artists"]["cursors"]["after"]
@@ -57,15 +59,17 @@ class ArtistIndex(object):
             r = sp.current_user_followed_artists(limit=50, after=cont)
             lst += map_artists(r["artists"]["items"])
             cont = r["artists"]["cursors"]["after"]
+
+        print("End Spotify fetch, got {} artists".format(len(lst)))
         return lst
 
     def _cached_get_all_artists(self, sp):
         try:
-            with open("arts.pickle", "rb" ) as fp:
+            with open(self._CACHE_FILE, "rb" ) as fp:
                 return pickle.load(fp)
         except IOError:
             lst = self._get_all_artists(sp)
-            with open("arts.pickle", "wb+" ) as fp:
+            with open(self._CACHE_FILE, "wb+" ) as fp:
                 pickle.dump(lst, fp)
             return lst
 
@@ -85,7 +89,15 @@ class ArtistIndex(object):
             arts[art["name"]] = art
         return arts
 
-    def __init__(self, sp):
+    def __init__(self, sp, force_cache_clean=False):
+        self._CACHE_FILE = "arts.pickle"
+        if force_cache_clean:
+            try:
+                print("Removed cache")
+                os.remove(self._CACHE_FILE)
+            except:
+                print("Failed to clean arts cache")
+
         lst = self._cached_get_all_artists(sp)
         self._arts_by_genre = self._index_artists_by_genre(lst)
         self._arts_by_name = self._index_artists_by_name(lst)
@@ -94,6 +106,10 @@ class ArtistIndex(object):
     def get_genres(self):
         return self._arts_by_genre.keys()
 
+    def add_genre(self, g):
+        if g not in self._arts_by_genre:
+            self._arts_by_genre[g] = []
+
     def get_artists_for_genre(self, gen):
         return self._arts_by_genre[gen]
 
@@ -101,7 +117,7 @@ class ArtistIndex(object):
         return self._arts_by_name[name]
 
     def merge_subgenre_into_genre(self, subgenre, merge_into):
-        if merge_into not in self._arts_by_genre:
+        if merge_into not in self._arts_by_genre or subgenre not in self._arts_by_genre:
             # Subgenre may have already been merged to another
             return False
 
@@ -160,7 +176,7 @@ class GenreSimilarityMerger(GenreMerger):
         merge_cnt = 0
         merge_map = self._get_genres_merge_map(arts_idx)
         for subset in merge_map.keys():
-            if idx.merge_subgenre_into_genre(subset, merge_map[subset]):
+            if arts_idx.merge_subgenre_into_genre(subset, merge_map[subset]):
                 merge_cnt += 1
         return merge_cnt
 
@@ -199,9 +215,9 @@ class SmallGenreMerger(GenreMerger):
         merge_cnt = 0
         for gen in arts_idx.get_genres():
             cnt = len(arts_idx.get_artists_for_genre(gen))
-            safe_del = self._safe_to_delete(idx, gen)
+            safe_del = self._safe_to_delete(arts_idx, gen)
             if cnt <= self._subgenre_min_size and safe_del:
-                idx.destructive_remove(gen)
+                arts_idx.destructive_remove(gen)
                 merge_cnt += 1
         return merge_cnt
 
@@ -229,43 +245,136 @@ class GenreCustomRulesMerger(GenreMerger):
                 cnt += 1
         return cnt
 
+class TinyGroupMerger(GenreMerger):
+    """ Remove tiny genres by asigning their contents to the a 'misc' supergroup """
+    def __init__(self, subgenre_min_size=2):
+        self._TARGET_GENRE = "misc"
+        self._subgenre_min_size = subgenre_min_size
 
-sp = spotipy.Spotify(auth=tok)
-idx = ArtistIndex(sp)
+    def apply_to(self, arts_idx):
+        merge_cnt = 0
+        arts_idx.add_genre(self._TARGET_GENRE)
+        for gen in arts_idx.get_genres():
+            cnt = len(arts_idx.get_artists_for_genre(gen))
+            if cnt <= self._subgenre_min_size:
+                arts_idx.merge_subgenre_into_genre(gen, self._TARGET_GENRE)
+                merge_cnt += 1
+        return merge_cnt
 
-GENRE_MIN_SIZE = 5
-SUBSET_SCORE_THRESHOLD = 0.5
-MAX_SUBGENRE_MERGE_SIZE = 20
+class Indexer(object):
+    def __init__(self, sp, custom_genre_merge_rules):
+        self.sp = sp
+        self.custom_genre_merge_rules = custom_genre_merge_rules
+        self.GENRE_MIN_SIZE = 5
+        self.SUBSET_SCORE_THRESHOLD = 0.5
+        self.MAX_SUBGENRE_MERGE_SIZE = 20
+        self.refresh_index()
 
-print("IDX has {} genres".format(len(idx.get_genres())))
-cnt = GenreCustomRulesMerger(CFG["custom_genre_merge_rules"]).apply_to(idx)
-print("Removed {} genres".format(cnt))
-cnt = SmallGenreMerger(GENRE_MIN_SIZE).apply_to(idx)
-print("Removed {} genres".format(cnt))
-cnt = GenreSimilarityMerger(MAX_SUBGENRE_MERGE_SIZE, SUBSET_SCORE_THRESHOLD).apply_to(idx)
-print("Removed {} genres".format(cnt))
-cnt = GenreSimilarityMerger(MAX_SUBGENRE_MERGE_SIZE, SUBSET_SCORE_THRESHOLD).apply_to(idx)
-print("Removed {} genres".format(cnt))
-print("IDX has {} genres".format(len(idx.get_genres())))
+    def refresh_index(self, force_cache_clean=False):
+        self.idx = ArtistIndex(self.sp, force_cache_clean)
+        print("IDX has {} genres".format(len(self.idx.get_genres())))
+        cnt = GenreCustomRulesMerger(self.custom_genre_merge_rules).apply_to(self.idx)
+        print("Removed {} genres".format(cnt))
+        cnt = SmallGenreMerger(self.GENRE_MIN_SIZE).apply_to(self.idx)
+        print("Removed {} genres".format(cnt))
+        cnt = GenreSimilarityMerger(self.MAX_SUBGENRE_MERGE_SIZE, self.SUBSET_SCORE_THRESHOLD).apply_to(self.idx)
+        print("Removed {} genres".format(cnt))
+        cnt = GenreSimilarityMerger(self.MAX_SUBGENRE_MERGE_SIZE, self.SUBSET_SCORE_THRESHOLD).apply_to(self.idx)
+        print("Removed {} genres".format(cnt))
+        cnt = TinyGroupMerger().apply_to(self.idx)
+        print("Removed {} genres".format(cnt))
+        print("IDX has {} genres".format(len(self.idx.get_genres())))
 
-from flask import Flask
-flask_app = Flask(__name__)
+from flask import Flask, send_from_directory, redirect, url_for
+flask_app = Flask(__name__, static_url_path='')
+idx = Indexer(spotipy.Spotify(auth=tok), CFG["custom_genre_merge_rules"])
 
-CSS = """
+BASE_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+<title>Sp</title>
+<style>
+body {
+  background-color: black;
+  color: #DFF;
+}
+
+a {
+  color: #DFF;
+  text-decoration: none;
+}
+
+.idx li {
+  display: inline-flex;
+  padding-right: 20px;
+  white-space: nowrap;
+}
+
+.arts li {
+  display: inline-block;
+  border: 1px black solid;
+  margin: 5px;
+  width: 200px;
+  height: 225px;
+  text-align: center;
+}
+
+.arts li a {
+  display: block;
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+}
+
+.arts li img {
+  display: flex;
+  width: 200px;
+  height: 200px;
+  padding-bottom: 5px;
+  border-radius: 50px;
+}
+</style>
+</head>
+<body>
 """
+BASE_HTML_END = """
+<a href="/refresh">Refresh index</a>
+</body>
+</html>
+"""
+
+@flask_app.route('/favicon.ico')
+def flask_ep_favicon():
+    return send_from_directory('./', 'favicon.ico')
+
+@flask_app.route('/refresh')
+def flask_ep_refresh():
+    idx.refresh_index(force_cache_clean=True)
+    return redirect(url_for('flask_ep_home'))
 
 @flask_app.route('/')
 def flask_ep_home():
-    s = CSS
-    for gen in idx.get_genres():
-        s += "<h2>{}</h2>".format(gen)
-        s += "<ul>"
-        for art_name in idx.get_artists_for_genre(gen):
-            art = idx.get_artist(art_name)
+    s= ""
+    s += "<h2>Goto</h2>"
+    s += "<ul class='idx'>"
+    for gen in idx.idx.get_genres():
+        s += "<li><a href='#{}'>{}</a></li>".format(gen.replace(' ', '-'), gen)
+    s += "</ul>"
+
+    for gen in idx.idx.get_genres():
+        s += "<h2 id='{}'>{}</h2>".format(gen.replace(' ', '-'), gen)
+        s += "<ul class='arts'>"
+        for art_name in idx.idx.get_artists_for_genre(gen):
+            art = idx.idx.get_artist(art_name)
             s+= "<li><a href='{}'><img src='{}'/>{}</a></li>".format(art["uri"], art["img"], art_name)
         s += "</ul>"
 
-    return s
+    return BASE_HTML + s + BASE_HTML_END
 
 flask_app.run(debug=True)
 
