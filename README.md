@@ -31,7 +31,15 @@ The following installation instructions work in Raspbianm and should be easy to 
 
 ## My categories don't make sense!
 
-TODO exmplain algo is dumb
+Spotify classifier doesn't use any clever algorithms to determine the grouppings. In short, it will:
+
+1. Iterate through your artists to find all the genres you listen to.
+1. Merge genres that are very similar (eg they share a large % of artists)
+1. Merge genres that are small with their closest match
+
+The algorithm isn't particularly smart, and isn't even stable (the result will depend on the order of application of the rules - so you may get different results in different runs!)
+
+For 'small' issues, you may define custom rules in config.json; here you can define a list of subgenres that should be merged to a parent genre. If there is a similarity rule this service doesn't exploit, you may define your own merge rules by extending the GenreMerger class. PRs welcome!
 
 
 ## I want to change how the index looks
