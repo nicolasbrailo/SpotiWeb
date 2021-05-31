@@ -4,6 +4,8 @@ Browse Spotify artists groupped by genre.
 
 Once your Spotify list of artists becomes too large to manage, you can use Spotify classifier to automatically go through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. spotify_classifier will offer a simple web page with an index of all the artists you followed, groupped by somewhat logical categories.
 
+This is a self-hosted service: it requires an API key for Spotify, and you need to host it yourself (ie just run it in your computer. It's a Flask app).
+
 
 ## Running
 
