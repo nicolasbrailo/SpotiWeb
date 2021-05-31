@@ -1,30 +1,39 @@
-import sys
+import json
 import os
 import pickle
 import spotipy
 import spotipy.util as util
+import sys
 
-import json
-def pp(x):
+def dbg_prettyprint(x):
     print(json.dumps(x, indent=2, sort_keys=True))
 
-with open('config.json', 'r') as fp:
-    CFG = json.loads(fp.read())
+try:
+    with open('config.json', 'r') as fp:
+        CFG = json.loads(fp.read())
+except:
+    print("Config file not found. Please read the README")
+    exit(1)
 
-
-sp_scopes = "app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read"
-sp_redir_uri = "http://127.0.0.1:2000/test"
-
-tok = util.prompt_for_user_token(
+#sp_scopes = "app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read"
+AUTH = spotipy.oauth2.SpotifyOAuth(
+        scope="user-follow-read",
         username=CFG["sp_username"],
-        scope=sp_scopes,
         client_id=CFG["sp_client_id"],
         client_secret=CFG["sp_client_secret"],
-        redirect_uri=sp_redir_uri)
+        redirect_uri=CFG["sp_redirect_uri"],
+        open_browser=False)
 
-if not tok:
-    print("Can't auth")
-    exit(1)
+if True:
+    test = spotipy.Spotify(auth_manager=AUTH).current_user_followed_artists(limit=1)
+    if not test or 'artists' not in test or 'items' not in test['artists']:
+        print("Didn't receive a valid response from Spotipy. Expected {artists: { items: [] }}, received " + str(test))
+        exit(1)
+
+    if not len(test['artists']) > 0:
+        print("No artists were found, can't continue")
+        exit(1)
+
 
 class ArtistIndex(object):
     def _get_all_artists(self, sp):
@@ -68,6 +77,7 @@ class ArtistIndex(object):
             with open(self._CACHE_FILE, "rb" ) as fp:
                 return pickle.load(fp)
         except IOError:
+            print("Couldn't found artists cache, will fetch all artists (this is a slow operation)")
             lst = self._get_all_artists(sp)
             with open(self._CACHE_FILE, "wb+" ) as fp:
                 pickle.dump(lst, fp)
@@ -213,7 +223,7 @@ class SmallGenreMerger(GenreMerger):
 
     def apply_to(self, arts_idx):
         merge_cnt = 0
-        for gen in arts_idx.get_genres():
+        for gen in list(arts_idx.get_genres()):
             cnt = len(arts_idx.get_artists_for_genre(gen))
             safe_del = self._safe_to_delete(arts_idx, gen)
             if cnt <= self._subgenre_min_size and safe_del:
@@ -254,7 +264,7 @@ class TinyGroupMerger(GenreMerger):
     def apply_to(self, arts_idx):
         merge_cnt = 0
         arts_idx.add_genre(self._TARGET_GENRE)
-        for gen in arts_idx.get_genres():
+        for gen in list(arts_idx.get_genres()):
             cnt = len(arts_idx.get_artists_for_genre(gen))
             if cnt <= self._subgenre_min_size:
                 arts_idx.merge_subgenre_into_genre(gen, self._TARGET_GENRE)
@@ -287,7 +297,7 @@ class Indexer(object):
 
 from flask import Flask, send_from_directory, redirect, url_for
 flask_app = Flask(__name__, static_url_path='')
-idx = Indexer(spotipy.Spotify(auth=tok), CFG["custom_genre_merge_rules"])
+idx = Indexer(spotipy.Spotify(auth_manager=AUTH), CFG["custom_genre_merge_rules"])
 
 BASE_HTML = """
 <!DOCTYPE html>
@@ -376,5 +386,6 @@ def flask_ep_home():
 
     return BASE_HTML + s + BASE_HTML_END
 
-flask_app.run(debug=True)
+flask_debug_mode = CFG['flask_debug_mode'] if 'flask_debug_mode' in CFG else False
+flask_app.run(host=CFG['listen_host'], port=CFG['listen_port'], debug=flask_debug_mode)
 

@@ -2,6 +2,7 @@
 
 [packages]
 spotipy = {git = "https://github.com/plamere/spotipy.git"}
+flask = {index = "piwheels",version = "*"}
 requests = "*"
 
 [requires]
