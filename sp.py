@@ -53,7 +53,7 @@ class ArtistIndex(object):
 
             def map_art(a):
                 new = {}
-                new["name"] = a["name"].encode('utf-8')
+                new["name"] = a["name"]# .encode('utf-8')
                 new["uri"] = a["uri"] # a["external_urls"]["spotify"]
                 new["img"] = pick_image(a["images"], IMG_TARGET_SIDE_LENGTH)
                 new["genres"] = a["genres"]
@@ -114,7 +114,13 @@ class ArtistIndex(object):
         #self._sorted_gens = sorted(self._arts_by_genre, key=lambda x: len(self._arts_by_genre[x]))
 
     def get_genres(self):
-        return self._arts_by_genre.keys()
+        return list(self._arts_by_genre.keys())
+
+    def get_all_artists(self):
+        return self._arts_by_name
+
+    def get_all_artists_by_genre(self):
+        return self._arts_by_genre
 
     def add_genre(self, g):
         if g not in self._arts_by_genre:
@@ -299,92 +305,30 @@ from flask import Flask, send_from_directory, redirect, url_for
 flask_app = Flask(__name__, static_url_path='')
 idx = Indexer(spotipy.Spotify(auth_manager=AUTH), CFG["custom_genre_merge_rules"])
 
-BASE_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
-<title>Sp</title>
-<style>
-body {
-  background-color: black;
-  color: #DFF;
-}
-
-a {
-  color: #DFF;
-  text-decoration: none;
-}
-
-.idx li {
-  display: inline-flex;
-  padding-right: 20px;
-  white-space: nowrap;
-}
-
-.arts li {
-  display: inline-block;
-  border: 1px black solid;
-  margin: 5px;
-  width: 200px;
-  height: 225px;
-  text-align: center;
-}
-
-.arts li a {
-  display: block;
-  width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: bold;
-}
-
-.arts li img {
-  display: flex;
-  width: 200px;
-  height: 200px;
-  padding-bottom: 5px;
-  border-radius: 50px;
-}
-</style>
-</head>
-<body>
-"""
-BASE_HTML_END = """
-<a href="/refresh">Refresh index</a>
-</body>
-</html>
-"""
-
-@flask_app.route('/favicon.ico')
-def flask_ep_favicon():
-    return send_from_directory('./', 'favicon.ico')
-
-@flask_app.route('/refresh')
+@flask_app.route('/api/refresh')
 def flask_ep_refresh():
     idx.refresh_index(force_cache_clean=True)
     return redirect(url_for('flask_ep_home'))
 
+@flask_app.route('/api/fetch_all')
+def flask_jsapi_fetch_all():
+    return json.dumps({
+            'genres': idx.idx.get_genres(),
+            'artists': idx.idx.get_all_artists(),
+            'artists_by_genre': idx.idx.get_all_artists_by_genre(),
+        })
+
 @flask_app.route('/')
 def flask_ep_home():
-    s= ""
-    s += "<h2>Goto</h2>"
-    s += "<ul class='idx'>"
-    for gen in idx.idx.get_genres():
-        s += "<li><a href='#{}'>{}</a></li>".format(gen.replace(' ', '-'), gen)
-    s += "</ul>"
+    return send_from_directory('./webapp/', 'index.html')
 
-    for gen in idx.idx.get_genres():
-        s += "<h2 id='{}'>{}</h2>".format(gen.replace(' ', '-'), gen)
-        s += "<ul class='arts'>"
-        for art_name in idx.idx.get_artists_for_genre(gen):
-            art = idx.idx.get_artist(art_name)
-            s+= "<li><a href='{}'><img src='{}'/>{}</a></li>".format(art["uri"], art["img"], art_name)
-        s += "</ul>"
+@flask_app.route('/favicon.ico')
+def flask_ep_favicon():
+    return send_from_directory('./webapp/', 'favicon.ico')
 
-    return BASE_HTML + s + BASE_HTML_END
+@flask_app.route('/webapp/<path:urlpath>')
+def flask_webapp_root(urlpath):
+    return send_from_directory('./webapp/', urlpath)
 
 flask_debug_mode = CFG['flask_debug_mode'] if 'flask_debug_mode' in CFG else False
 flask_app.run(host=CFG['listen_host'], port=CFG['listen_port'], debug=flask_debug_mode)

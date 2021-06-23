@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sp</title>
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+<link rel="stylesheet" href="webapp/style.css">
+
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+var collection = null;
+
+function buildGenreHref(gen) {
+  return gen.replace(' ', '-');
+}
+
+function displayGenres() {
+  var items = [];
+  $.each(collection.genres, (_, gen) => {
+    items.push(`<li><a href="#${buildGenreHref(gen)}">${gen}</a></li>`);
+  });
+  $('#genres_idx').html(items.join(''));
+}
+
+function displayArts() {
+  var everything = [];
+  $.each(collection.genres, (_, gen) => {
+    var artlist = [];
+    $.each(collection.artists_by_genre[gen], (_, art) => {
+      const art_info = collection.artists[art];
+      if (!art_info) {
+        artlist.push(`<li><img src="https://en.wikipedia.org/wiki/Nyan_Cat#/media/File:Nyan_cat_250px_frame.PNG"/>${art}</li>`);
+      } else {
+        artlist.push(`<li><a href='${art_info.uri}'><img src='${art_info.img}'/>${art}</a></li>`);
+      }
+    });
+
+    everything.push(`<h2 id='${buildGenreHref(gen)}'>${gen}</h2>
+                     <ul class='arts'>${artlist.join('')}</ul>`);
+  });
+  $('#arts_by_gen').html(everything.join(''));
+}
+
+function on_collection_loaded(col) {
+  col.genres.sort();
+  collection = col;
+  displayGenres();
+  displayArts();
+}
+
+$.ajax({
+  type: 'GET',
+  dataType: 'json',
+  url: "/api/fetch_all",
+  success: on_collection_loaded,
+});
+</script>
+
+</head>
+<body>
+
+<h2>Genres index</h2>
+<ul id="genres_idx" class='idx'>
+</ul>
+
+<div id="arts_by_gen">
+</div>
+
+<a href="/api/refresh">Refresh index</a>
+</body>
+</html>
