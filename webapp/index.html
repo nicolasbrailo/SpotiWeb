@@ -8,44 +8,90 @@
 
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 <script type="text/javascript" charset="utf-8">
+
+const HISTORY_CNT_LAST_ARTS_PLAYED = 10;
 var collection = null;
 
 function buildGenreHref(gen) {
   return gen.replace(' ', '-');
 }
 
-function displayGenres() {
+function buildGenres() {
   var items = [];
   $.each(collection.genres, (_, gen) => {
     items.push(`<li><a href="#${buildGenreHref(gen)}">${gen}</a></li>`);
   });
-  $('#genres_idx').html(items.join(''));
+  return items.join('');
 }
 
-function displayArts() {
+function buildSingleArt(art) {
+  const art_info = collection.artists[art];
+  if (!art_info) {
+    return `<li><img src="https://en.wikipedia.org/wiki/Nyan_Cat#/media/File:Nyan_cat_250px_frame.PNG"/>${art}</li>`;
+  } else {
+    return `<li><a href='${art_info.uri}' onclick='on_art_clicked("${art}")'><img src='${art_info.img}'/>${art}</a></li>`;
+  }
+}
+
+function buildArts() {
   var everything = [];
   $.each(collection.genres, (_, gen) => {
     var artlist = [];
-    $.each(collection.artists_by_genre[gen], (_, art) => {
-      const art_info = collection.artists[art];
-      if (!art_info) {
-        artlist.push(`<li><img src="https://en.wikipedia.org/wiki/Nyan_Cat#/media/File:Nyan_cat_250px_frame.PNG"/>${art}</li>`);
-      } else {
-        artlist.push(`<li><a href='${art_info.uri}'><img src='${art_info.img}'/>${art}</a></li>`);
-      }
-    });
-
+    $.each(collection.artists_by_genre[gen], (_, art) => artlist.push(buildSingleArt(art)) );
     everything.push(`<h2 id='${buildGenreHref(gen)}'>${gen}</h2>
                      <ul class='arts'>${artlist.join('')}</ul>`);
   });
-  $('#arts_by_gen').html(everything.join(''));
+  return everything.join('');
+}
+
+function getRecentlyPlayed() {
+  var lastPlayed;
+  try {
+    lastPlayed = JSON.parse(localStorage.getItem('lastPlayed'));
+  } catch (e) {
+    // Ignore
+  } finally {
+    if (!Array.isArray(lastPlayed)) lastPlayed = [];
+  }
+
+  return lastPlayed;
+}
+
+function buildRecentlyPlayed() {
+  const lastPlayed = getRecentlyPlayed();
+  if (lastPlayed.length == 0) return '';
+  var arts = [];
+  $.each(lastPlayed, (_, art) => arts.push(buildSingleArt(art)) );
+
+  return `<h2>Recently played</h2><ul class='arts'>${arts.join('')}</ul>`;
+}
+
+function rebuildRecentlyPlayed() {
+  $('#recently_played').html(buildRecentlyPlayed());
+}
+
+function on_art_clicked(art) {
+  const lastPlayed = getRecentlyPlayed();
+  var newLastPlayed = [];
+  $.each(lastPlayed, (_,a) => {
+    if (a != art) newLastPlayed.push(a);
+  });
+  newLastPlayed.push(art);
+
+  if (newLastPlayed.length > HISTORY_CNT_LAST_ARTS_PLAYED) {
+    newLastPlayed = newLastPlayed.slice(1, HISTORY_CNT_LAST_ARTS_PLAYED+1);
+  }
+
+  localStorage.setItem('lastPlayed', JSON.stringify(newLastPlayed));
+  rebuildRecentlyPlayed();
 }
 
 function on_collection_loaded(col) {
   col.genres.sort();
   collection = col;
-  displayGenres();
-  displayArts();
+  $('#genres_idx').html(buildGenres())
+  $('#arts_by_gen').html(buildArts());
+  rebuildRecentlyPlayed();
 }
 
 $.ajax({
@@ -58,6 +104,9 @@ $.ajax({
 
 </head>
 <body>
+
+<div id="recently_played">
+</div>
 
 <h2>Genres index</h2>
 <ul id="genres_idx" class='idx'>
