@@ -23,6 +23,16 @@ a {
   text-align: center;
 }
 
+.arts li .expandView {
+  cursor: crosshair; 
+  display: inline;
+  position: absolute;
+  width: 95px;
+  text-align: right;
+  font-weight: bold;
+  font-size: 25px;
+}
+
 .arts li a {
   display: block;
   width: 200px;
@@ -38,5 +48,44 @@ a {
   height: 200px;
   padding-bottom: 5px;
   border-radius: 50px;
+}
+
+.arts li.selected {
+  border: 1px gray solid;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.arts li.selected a {
+  display: block;
+  width: 200px;
+  overflow: visible;
+  font-weight: bold;
+  font-size: 25px;
+}
+
+.arts li div {
+  display: none;
+}
+
+.arts li div.selected {
+  display: block;
+}
+
+.arts li div ul.albums {
+}
+
+.arts li div li.album_info{
+  width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.arts li div li.album_info a {
+  text-align: center;
+  font-size: 15px;
 }
 

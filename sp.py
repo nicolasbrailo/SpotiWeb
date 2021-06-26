@@ -53,6 +53,7 @@ class ArtistIndex(object):
 
             def map_art(a):
                 new = {}
+                new["id"] = a["id"]# .encode('utf-8')
                 new["name"] = a["name"]# .encode('utf-8')
                 new["uri"] = a["uri"] # a["external_urls"]["spotify"]
                 new["img"] = pick_image(a["images"], IMG_TARGET_SIDE_LENGTH)
@@ -317,6 +318,11 @@ def flask_jsapi_fetch_all():
             'artists': idx.idx.get_all_artists(),
             'artists_by_genre': idx.idx.get_all_artists_by_genre(),
         })
+
+@flask_app.route('/api/get_tok')
+def flask_jsapi_get_tok():
+    tok = AUTH.get_cached_token()['access_token']
+    return json.dumps({'Authorization': f'Bearer {tok}'})
 
 @flask_app.route('/')
 def flask_ep_home():
