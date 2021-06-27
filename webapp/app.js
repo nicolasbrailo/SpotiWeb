@@ -185,7 +185,7 @@ class UI_Builder {
                     .filter(gen => this.collection.genres.includes(gen))
                     .map(gen => `<li><a href=#${this.buildGenreHref(gen)}>${gen}</a><li>`)
                     .join('');
-    const genres_view = (genres.length == 0)? '' : `<p>More: <ul class="genresIdx">${genres}</ul></p>`
+    const genres_view = (genres.length == 0)? '' : `<p class="genresList">More:</p><ul class="genresList">${genres}</ul>`
     return genres_view + this.buildAlbumList(art_name, albums);
   }
 

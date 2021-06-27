@@ -8,14 +8,6 @@ a {
   text-decoration: none;
 }
 
-.genresIdx {
-  border: 1px solid red;
-  display: inline;
-  width: auto;
-  overflow: show;
-  font-weight: bold;
-}
-
 .idx li {
   display: inline-flex;
   padding-right: 20px;
@@ -101,5 +93,20 @@ a {
 .arts li div li.album_info a {
   text-align: center;
   font-size: 15px;
+}
+
+.arts li.selected p.genresList {
+  display: inline;
+}
+.arts li.selected ul.genresList {
+  display: inline;
+}
+.arts li.selected .genresList li {
+  display: inline;
+}
+.arts li.selected .genresList a {
+  display: inline;
+  font-weight: unset;
+  font-size: initial;
 }
 
