@@ -8,6 +8,14 @@ a {
   text-decoration: none;
 }
 
+.genresIdx {
+  border: 1px solid red;
+  display: inline;
+  width: auto;
+  overflow: show;
+  font-weight: bold;
+}
+
 .idx li {
   display: inline-flex;
   padding-right: 20px;
@@ -31,6 +39,12 @@ a {
   text-align: right;
   font-weight: bold;
   font-size: 25px;
+}
+
+.arts li.selected .expandView {
+  position: relative;
+  float: right;
+  width: 100%;
 }
 
 .arts li a {
