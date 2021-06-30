@@ -13,6 +13,13 @@ function wget(url, cb, h={}) {
 class LocalStorageManager {
   constructor(max_cache_age_secs) {
     this.max_cache_age_secs = max_cache_age_secs;
+    this.cache_idx = this.get('cache_idx', {});
+    if (typeof(this.cache_idx) != typeof({})) {
+      console.log("Local storage cache seems bad, will clear it");
+      this.cache_idx = {};
+      this.save('cache_idx', this.cache_idx);
+      localStorage.clear();
+    }
   }
 
   get(key, default_val) {
@@ -28,16 +35,20 @@ class LocalStorageManager {
     localStorage.setItem(key, JSON.stringify(val));
   }
 
-  cacheGet(key, cb_if_none) {
-    const last_update = this.get(`cache_age_for_${key}`, 0);
+  cacheGet(key) {
+    const last_update = this.cache_idx[key] || 0;
     const age = Date.now() - last_update;
     const cache_is_old = (age > 1000 * this.max_cache_age_secs);
-    if (cache_is_old) return null;
+    if (cache_is_old) {
+      localStorage.removeItem(key);
+      return null;
+    }
     return this.get(key, null);
   }
 
   cacheSave(key, val) {
-    this.save(`cache_age_for_${key}`, Date.now());
+    this.cache_idx[key] = Date.now();
+    this.save('cache_idx', this.cache_idx);
     this.save(key, val);
   }
 };
@@ -227,38 +238,83 @@ class UI_Builder {
 };
 
 class SpotifyProxy {
-  SpotifyProxy(cache) {
+  constructor(cache) {
     this.cache = cache;
+    this.max_auth_age = 2 * 60 * 1000; // 2 Minutes
+  }
+
+  _withAuth(cb) {
+    const auth_age = Date.now() - (this.auth_settime || 0);
+    if (!this.auth || auth_age > this.max_auth_age) {
+      wget("/api/get_tok", auth => {
+        this.auth = auth;
+        this.auth_settime = Date.now();
+        cb(this.auth);
+      });
+    } else {
+      cb(this.auth);
+    }
   }
 
   _spApi(action, url, data) {
     const promise = $.Deferred();
-    wget("/api/get_tok", auth => {
+    this._withAuth(auth => {
       const req = {
           type: action,
           dataType: 'json',
+          contentType: 'application/json',
+          processData: false,
           headers: auth,
           success: promise.resolve,
-          error: console.error,
           url: 'https://api.spotify.com/v1/' + url,
+          data: JSON.stringify(data),
+      }
+
+      req.error = e => {
+        const spe = e?.responseJSON?.error;
+        if (spe?.status == 404 && spe?.reason == 'NO_ACTIVE_DEVICE') {
+          console.log("No active device: trying to set active device");
+          this._setActiveDevice().then(_ => {
+            // Don't retry again
+            req.error = console.log;
+            $.ajax(req);
+          });
+        } else {
+          console.log(e);
         }
-      if (data) req['data'] = JSON.stringify(data);
+      }
+
       $.ajax(req);
     });
+
     return promise;
   }
 
-  fetchAlbumsFor(artist_id, cb) {
-    this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album`).then( resp => {
-      if (resp.items > 50) {
-        console.error(`Albums for artist ${artist_id} requires pagination. Not implemented`);
-      }
-      cb(resp.items);
+  _setActiveDevice() {
+    return this._spApi('GET', 'me/player/devices')
+    .then(rsp => {
+      if (!rsp || !rsp.devices || !rsp.devices.length) return false;
+      const new_dev = rsp.devices[rsp.devices.length-1];
+      console.log("Selecting new device to play", new_dev.name);
+      return this._spApi('PUT', 'me/player', {'device_ids': [new_dev.id]});
     });
   }
 
   play(obj) {
     return this._spApi('PUT', 'me/player/play', {'context_uri': obj.uri});
+  }
+
+  fetchAlbumsFor(artist_id, cb) {
+    const lst = this.cache.cacheGet(`album_list_for_${artist_id}`);
+    if (lst) return cb(lst);
+
+    this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album`).then( resp => {
+      if (resp.items > 50) {
+        console.error(`Albums for artist ${artist_id} requires pagination. Not implemented`);
+      }
+      this.cache.cacheSave(`album_list_for_${artist_id}`, resp.items);
+      cb(resp.items);
+    });
   }
 };
 
