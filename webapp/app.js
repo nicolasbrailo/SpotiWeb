@@ -227,7 +227,7 @@ class UI_Builder {
       this.known_albums[album.id] = album;
 
       var albumtype = '';
-      if (album.album_type == 'single') albumtype = '-Single';
+      if (album.album_type == 'single') albumtype = '-Single:';
 
       return `<li class='album_info'>
                 <a href='javascript:' onclick='UI_Builder.trampolineOnAlbumClicked("${art_name}", "${album.id}")'>
