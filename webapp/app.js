@@ -226,10 +226,13 @@ class UI_Builder {
       // Save this album to look it up again in the onClick callback
       this.known_albums[album.id] = album;
 
+      var albumtype = '';
+      if (album.album_type == 'single') albumtype = '-Single';
+
       return `<li class='album_info'>
                 <a href='javascript:' onclick='UI_Builder.trampolineOnAlbumClicked("${art_name}", "${album.id}")'>
                   <img src='${imgClosestTo200(album.images)}'/>
-                  ${(new Date(album.release_date)).getFullYear()} - ${album.name}
+                  ${(new Date(album.release_date)).getFullYear()}${albumtype} ${album.name}
                 </a>
               </li>`
     }).join('');
@@ -308,8 +311,8 @@ class SpotifyProxy {
     const lst = this.cache.cacheGet(`album_list_for_${artist_id}`);
     if (lst) return cb(lst);
 
-    this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album`).then( resp => {
-      if (resp.items > 50) {
+    this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album,single`).then( resp => {
+      if (resp.items > 48) {
         console.error(`Albums for artist ${artist_id} requires pagination. Not implemented`);
       }
       this.cache.cacheSave(`album_list_for_${artist_id}`, resp.items);
