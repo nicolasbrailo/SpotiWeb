@@ -107,6 +107,9 @@ class UI_Builder {
     this.onArtistExpandClickedCb = console.log;
     this.onAlbumClickedCb = console.log;
     this.known_albums = {};
+    // A unique id to represent each tile. Same artist may have multiple 
+    // tiles in different sections
+    this.art_tile_unique_id = 42;
     UI_Builder.self = this;
   }
 
@@ -126,9 +129,9 @@ class UI_Builder {
   }
 
   onToggleArtistExtendedViewClicked(cb) { this.onArtistExpandClickedCb = cb; }
-  static trampolineToggleArtistExtendedView(src_id, art_name) {
+  static trampolineToggleArtistExtendedView(tile_id, art_name) {
     const art_obj = UI_Builder.self.collection.artists[art_name];
-    UI_Builder.self.onArtistExpandClickedCb(src_id, art_obj);
+    UI_Builder.self.onArtistExpandClickedCb(tile_id, art_obj);
   }
 
   onArtistClicked(cb) { this.onArtistClickedCb = cb; }
@@ -137,26 +140,27 @@ class UI_Builder {
     UI_Builder.self.onArtistClickedCb(art_obj);
   }
 
-  buildSingleArt(art, src_id='') {
+  buildSingleArt(art) {
     const art_info = this.collection.artists[art];
+    const unique_id = this.art_tile_unique_id++;
     if (!art_info) {
       return `<li><img src="https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG"/>${art}</li>`;
     } else {
       const imgurl = art_info.img? art_info.img : "https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG";
-      return `<li id='art${src_id}_node_${art_info.id}'>
-              <div class="expandView" onclick='UI_Builder.trampolineToggleArtistExtendedView("${src_id}", "${art}")'>&#9660;</div>
+      return `<li id='art${unique_id}_node_${art_info.id}'>
+              <div class="expandView" onclick='UI_Builder.trampolineToggleArtistExtendedView("${unique_id}", "${art}")'>&#9660;</div>
               <a href='javascript:' onclick='UI_Builder.trampolineOnArtistClicked("${art}")'>
                 <img src='${imgurl}'/>
                 ${art}
               </a>
-              <div id='art${src_id}_extended_info_${art_info.id}'>...</div>
+              <div id='art${unique_id}_extended_info_${art_info.id}'>...</div>
               </li>`;
     }
   }
 
-  toggleExtendedView(src, art_id) {
-    const art_view = document.getElementById(`art${src}_node_${art_id}`);
-    const art_extended_view = document.getElementById(`art${src}_extended_info_${art_id}`);
+  toggleExtendedView(tile_id, art_id) {
+    const art_view = document.getElementById(`art${tile_id}_node_${art_id}`);
+    const art_extended_view = document.getElementById(`art${tile_id}_extended_info_${art_id}`);
 
     if (art_view.classList.contains('selected')) {
       art_view.classList.remove('selected');
@@ -186,7 +190,7 @@ class UI_Builder {
   buildRecentlyPlayed() {
     const lastPlayed = this.recentlyPlayed.get();
     if (lastPlayed.length == 0) return '';
-    const lastPlayedUi = lastPlayed.map(art => this.buildSingleArt(art, 'recents')).join('');
+    const lastPlayedUi = lastPlayed.map(art => this.buildSingleArt(art)).join('');
     return `<h2>Recently played</h2><ul class='arts'>${lastPlayedUi}</ul>`;
   }
 
@@ -356,8 +360,8 @@ ui.onAlbumClicked((art,album) => {
   });
 });
 
-ui.onToggleArtistExtendedViewClicked((src, art) => {
-  const ext_view = ui.toggleExtendedView(src, art.id);
+ui.onToggleArtistExtendedViewClicked((tile_id, art) => {
+  const ext_view = ui.toggleExtendedView(tile_id, art.id);
   if (ext_view) {
     sp.fetchAlbumsFor(art.id, artAlbs => {
       ext_view.innerHTML = ui.buildExtendedView(art.name, artAlbs);
