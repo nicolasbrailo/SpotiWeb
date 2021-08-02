@@ -3,6 +3,18 @@ body {
   color: #DFF;
 }
 
+#error {
+  position: absolute;
+  bottom: 50px;
+  left: 5%;
+  width: 90%;
+  height: 150px;
+  padding: 20px;
+  border: 1px red solid;
+  background: black;
+  display: none;
+}
+
 a {
   color: #DFF;
   text-decoration: none;

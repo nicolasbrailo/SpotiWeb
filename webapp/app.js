@@ -1,12 +1,21 @@
 
+// TODO: Start porting backend to plain JS, localstorage seems enough to do all work
+
+function showError(msg) {
+  $('#error').show()
+  $('#error').innerHTML = msg;
+  setTimeout(() => $('#error').hide(), 3000);
+}
+
 function wget(url, cb, h={}) {
+showError("HOLA");
     return $.ajax({
       type: 'GET',
       dataType: 'json',
       headers: h,
       url: url,
       success: cb,
-      error: console.error,
+      error: showError,
     });
 }
 
