@@ -8,7 +8,6 @@ function showError(msg) {
 }
 
 function wget(url, cb, h={}) {
-showError("HOLA");
     return $.ajax({
       type: 'GET',
       dataType: 'json',
