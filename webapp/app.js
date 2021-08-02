@@ -1,6 +1,4 @@
 
-// TODO: Start porting backend to plain JS, localstorage seems enough to do all work
-
 function showError(msg) {
   $('#error').show()
   $('#error').innerHTML = msg;
@@ -306,17 +304,43 @@ class SpotifyProxy {
   }
 
   _setActiveDevice() {
+    return getAvailableDevices().then(devs => {
+      if (devs.length == 0) return false;
+      const new_dev = devs[devs.length-1];
+      console.log("Selecting new device to play", new_dev.name);
+      return setActiveDevice(new_dev.id);
+    });
+  }
+
+  setVolume(pct) {
+    return this._spApi('PUT', 'me/player/volume?volume_percent=' + pct, {'volume_percent': pct});
+  }
+
+  setActiveDevice(id) {
+    return this._spApi('PUT', 'me/player', {'device_ids': [id]});
+  }
+
+  getAvailableDevices() {
     return this._spApi('GET', 'me/player/devices')
     .then(rsp => {
-      if (!rsp || !rsp.devices || !rsp.devices.length) return false;
-      const new_dev = rsp.devices[rsp.devices.length-1];
-      console.log("Selecting new device to play", new_dev.name);
-      return this._spApi('PUT', 'me/player', {'device_ids': [new_dev.id]});
+      if (!rsp || !rsp.devices || !rsp.devices.length) return [];
+      return rsp.devices;
     });
   }
 
   play(obj) {
     return this._spApi('PUT', 'me/player/play', {'context_uri': obj.uri});
+  }
+
+  playPrev() { this._spApi('POST', 'me/player/previous', {}); }
+
+  playNext() { this._spApi('POST', 'me/player/next', {}); }
+
+  playPause() {
+    this._spApi('GET', 'me/player').then(p => {
+      const action = p.is_playing? 'me/player/pause' : 'me/player/play';
+      this._spApi('PUT', action, {}); 
+    });
   }
 
   fetchAlbumsFor(artist_id, cb) {
@@ -388,7 +412,39 @@ function reload(useCache=true) {
     collection.fetch(cb);
 }
 
+function buildPlayerCtrl() {
+  sp.getAvailableDevices().then(devs  => {
+    $.each(devs, (_, dev) => {
+      $('#playctrls_device').append($('<option/>').val(dev.id).text(dev.name));
+      if (dev.is_active) {
+        $('#playctrls_device select').val(dev.id);
+        $('#playctrls_vol').val(dev.volume_percent);
+      }
+    });
+  });
+
+  $('#playctrls_device').change(() => {
+    $('#playctrls_device option:selected').each((idx, opt) => {
+      const dev_id = opt.value;
+      const dev_name = opt.text;
+      sp.setActiveDevice(opt.value).then(_ => {
+        console.log("Selected new device", dev_name);
+      });
+    });
+  });
+
+  $('#playctrls_vol').change(_ => {
+    console.log("Set vol", $('#playctrls_vol').val());
+    sp.setVolume($('#playctrls_vol').val());
+  });
+
+  $('#playctrls_prev').click(_ => { sp.playPrev(); });
+  $('#playctrls_play').click(_ => { sp.playPause(); });
+  $('#playctrls_next').click(_ => { sp.playNext(); });
+}
+
 document.addEventListener('DOMContentLoaded', _ => {
+  buildPlayerCtrl();
   reload();
 
   document.getElementById('refreshCollection').addEventListener('click', _ => {
