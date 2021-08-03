@@ -304,11 +304,11 @@ class SpotifyProxy {
   }
 
   _setActiveDevice() {
-    return getAvailableDevices().then(devs => {
+    return this.getAvailableDevices().then(devs => {
       if (devs.length == 0) return false;
       const new_dev = devs[devs.length-1];
       console.log("Selecting new device to play", new_dev.name);
-      return setActiveDevice(new_dev.id);
+      return this.setActiveDevice(new_dev.id);
     });
   }
 
