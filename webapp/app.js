@@ -1,5 +1,5 @@
 
-function showError(msg) {
+function showErrorUi(msg) {
   $('#error').show()
   $('#error').innerHTML = msg;
   setTimeout(() => $('#error').hide(), 3000);
@@ -12,7 +12,7 @@ function wget(url, cb, h={}) {
       headers: h,
       url: url,
       success: cb,
-      error: showError,
+      error: showErrorUi,
     });
 }
 
@@ -289,7 +289,7 @@ class SpotifyProxy {
           console.log("No active device: trying to set active device");
           this._setActiveDevice().then(_ => {
             // Don't retry again
-            req.error = console.log;
+            req.error = showErrorUi;
             $.ajax(req);
           });
         } else {
@@ -307,7 +307,7 @@ class SpotifyProxy {
     return this.getAvailableDevices().then(devs => {
       if (devs.length == 0) return false;
       const new_dev = devs[devs.length-1];
-      console.log("Selecting new device to play", new_dev.name);
+      console.log("Selecting new device to play", new_dev.name, new_dev.id);
       return this.setActiveDevice(new_dev.id);
     });
   }
