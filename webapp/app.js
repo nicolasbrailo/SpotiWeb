@@ -39,7 +39,7 @@ class W {
 
       const httpStat = dataOrReqObj.status;
       if (stat != 'success' && httpStat > 299) {
-        W.showErrorUi('ERROR');
+        W.showErrorUi(JSON.stringify(objOrErr));
       }
 
       origComplete(dataOrReqObj, stat, objOrErr);
@@ -67,7 +67,7 @@ class LocalStorageManager {
     this.max_cache_age_secs = max_cache_age_secs;
     this.cache_idx = this.get('cache_idx', {});
     if (typeof(this.cache_idx) != typeof({})) {
-      console.log("Local storage cache seems bad, will clear it");
+      W.showErrorUi("Can't read local storage, will clear cache");
       this.cache_idx = {};
       this.save('cache_idx', this.cache_idx);
       localStorage.clear();
@@ -122,7 +122,7 @@ class CollectionManager {
   cachedFetch(cb) {
     const col = this.storage.cacheGet('collection');
     if (col) return cb(col);
-    console.log("Collection cache not valid, refetching");
+    W.showErrorUi("Collection cache not valid, refetching");
     return this.fetch(cb);
   }
 };
@@ -332,14 +332,14 @@ class SpotifyProxy {
       req.error = e => {
         const spe = e?.responseJSON?.error;
         if (spe?.status == 404 && spe?.reason == 'NO_ACTIVE_DEVICE') {
-          console.log("No active device: trying to set active device");
+          W.showErrorUi("No active device: trying to set active device");
           this._setActiveDevice().then(_ => {
             // Don't retry again
-            req.error = undefined;
+            req.error = W.showErrorUi;
             W.get(req);
           });
         } else {
-          console.log(e);
+          W.showErrorUi(JSON.stringify(e));
         }
       }
 
@@ -394,8 +394,8 @@ class SpotifyProxy {
     if (lst) return cb(lst);
 
     this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album,single`).then( resp => {
-      if (resp.items > 48) {
-        console.error(`Albums for artist ${artist_id} requires pagination. Not implemented`);
+      if (resp.items > 45) {
+        W.showErrorUi(`Albums for artist ${artist_id} requires pagination. Not implemented`);
       }
       this.cache.cacheSave(`album_list_for_${artist_id}`, resp.items);
       cb(resp.items);
