@@ -23,6 +23,19 @@ body {
   width: 100px;
 }
 
+#loading {
+  position: fixed;
+  top: calc(50% - 75px/2);
+  left: calc(50% - 75px/2);
+  width: 75px;
+  height: 75px;
+  line-height: 75px;
+  border: 1px green solid;
+  background: black;
+  text-align: center;
+  display: none;
+}
+
 #error {
   position: fixed;
   bottom: 50px;

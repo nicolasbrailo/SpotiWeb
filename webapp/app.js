@@ -1,20 +1,66 @@
+class W {
+  static reqsOnFlight = 0;
 
-function showErrorUi(msg) {
-  $('#error').show()
-  $('#error').innerHTML = msg;
-  setTimeout(() => $('#error').hide(), 3000);
-}
+  static maybeShowLoadingUi() {
+    const clock = (t) => {
+      const hr = Math.floor(t);
+      const hf = t - Math.floor(t);
+      const hr12 = hr % 12? hr % 12 : 12;
+      const clck = 128335 + hr12 + (hf? 12 : 0);
+      return `&#${clck};`;
+    };
 
-function wget(url, cb, h={}) {
-    return $.ajax({
+    const run = () => {
+      if (W.reqsOnFlight == 0) {
+        $('#loading').hide();
+        clearInterval(W.loadUiUpdateTask);
+      }
+      $('#loading').html(`${clock(W.loadUiClockT)} '&#9749;'`);
+      W.loadUiClockT += 0.5;
+    };
+
+    if (W.reqsOnFlight == 1) {
+      $('#loading').show();
+      W.loadUiClockT = 0.0;
+      W.loadUiUpdateTask = setInterval(run, 50);
+    }
+  }
+
+  static showErrorUi(msg) {
+    $('#error').show()
+    $('#error').innerHTML = msg;
+    setTimeout(() => $('#error').hide(), 3000);
+  }
+
+  static get(params) {
+    const origComplete = params.complete || (() => {});
+    params.complete = (dataOrReqObj, stat, objOrErr) => {
+      W.reqsOnFlight--;
+
+      const httpStat = dataOrReqObj.status;
+      if (stat != 'success' && httpStat > 299) {
+        W.showErrorUi('ERROR');
+      }
+
+      origComplete(dataOrReqObj, stat, objOrErr);
+    };
+
+    W.reqsOnFlight++;
+    W.maybeShowLoadingUi();
+    return $.ajax(params);
+  }
+
+  static getJson(url, cb) {
+    return W.get({
       type: 'GET',
       dataType: 'json',
-      headers: h,
+      contentType: 'application/json',
+      processData: false,
       url: url,
       success: cb,
-      error: showErrorUi,
     });
-}
+  }
+};
 
 class LocalStorageManager {
   constructor(max_cache_age_secs) {
@@ -65,7 +111,7 @@ class CollectionManager {
   }
 
   fetch(cb) {
-    wget("/api/fetch_all", col => {
+    W.getJson("/api/fetch_all", col => {
       col.genres.sort();
       $.each(col.artists_by_genre, (_,arts) => { arts.sort(); });
       this.storage.cacheSave('collection', col);
@@ -259,7 +305,7 @@ class SpotifyProxy {
   _withAuth(cb) {
     const auth_age = Date.now() - (this.auth_settime || 0);
     if (!this.auth || auth_age > this.max_auth_age) {
-      wget("/api/get_tok", auth => {
+      W.getJson("/api/get_tok", auth => {
         this.auth = auth;
         this.auth_settime = Date.now();
         cb(this.auth);
@@ -289,15 +335,15 @@ class SpotifyProxy {
           console.log("No active device: trying to set active device");
           this._setActiveDevice().then(_ => {
             // Don't retry again
-            req.error = showErrorUi;
-            $.ajax(req);
+            req.error = undefined;
+            W.get(req);
           });
         } else {
           console.log(e);
         }
       }
 
-      $.ajax(req);
+      W.get(req);
     });
 
     return promise;
