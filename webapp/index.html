@@ -14,12 +14,21 @@
 </head>
 <body>
 
-<div id="playctrls">
-  <button id="playctrls_prev">&#x23EE;</button>
-  <button id="playctrls_play">&#x23EF;</button>
-  <button id="playctrls_next">&#x23ED;</button>
-  <select id="playctrls_device"></select><br/>
-  <input  id="playctrls_vol" type="range" min="1" max="100"/>
+<div id="playctrls" class="nothingPlaying">
+  <img id="playingNow_StatusImg" src="https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG"></img>
+
+  <div id="playingNow_status">
+    <div id="playingNow_statusLine1"></div>
+    <div id="playingNow_statusLine2"></div>
+  </div>
+
+  <div id="ctrls">
+    <button id="playctrls_prev">&#x23EE;</button>
+    <button id="playctrls_play">&#x23EF;</button>
+    <button id="playctrls_next">&#x23ED;</button>
+    <input  id="playctrls_vol" type="range" min="1" max="100"/>
+    <select id="playctrls_device"></select><br/>
+  </div>
 </div>
 
 <div id="loading">

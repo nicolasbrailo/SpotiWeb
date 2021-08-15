@@ -28,7 +28,7 @@ class W {
 
   static showErrorUi(msg) {
     $('#error').show()
-    $('#error').innerHTML = msg;
+    $('#error').html(msg);
     setTimeout(() => $('#error').hide(), 3000);
   }
 
@@ -59,6 +59,70 @@ class W {
       url: url,
       success: cb,
     });
+  }
+};
+
+class UI_Periodic_Updater {
+  constructor(cb, intervalMs) {
+    this.bgTask = null;
+    this.callback = null;
+    this.install_visibility_callback();
+  }
+
+  installCallback(cb, intervalMs) {
+    this.callback = cb;
+    this.intervalMs = intervalMs;
+    this.reinstallTicker();
+  }
+
+  app_became_hidden() {
+    if (this.bgTask != null) {
+      clearInterval(this.bgTask);
+    }
+  }
+
+  reinstallTicker() {
+    if (this.bgTask == null && this.callback != null) {
+      this.bgTask = setInterval(this.callback, this.intervalMs);
+    }
+  }
+
+  app_became_visible() {
+    this.callback();
+    this.reinstallTicker();
+  }
+
+  static warn_if_visibility_not_supported(visChangeAction) {
+    if (this.visibility_checked !== undefined) return;
+    this.visibility_checked = true;
+    if (visChangeAction === undefined) {
+      console.log("Visibility changes not supported: UI elements won't auto-refresh");
+    }
+  }
+
+  install_visibility_callback() {
+    if (this.vis_cb_installed !== undefined) return;
+    this.vis_cb_installed = true;
+
+    var hidden, visChangeAction;
+    if (typeof document.hidden !== "undefined") { // Opera 12.10 and Firefox 18 and later support
+        hidden = "hidden";
+        visChangeAction = "visibilitychange";
+    } else if (typeof document.msHidden !== "undefined") {
+        hidden = "msHidden";
+        visChangeAction = "msvisibilitychange";
+    } else if (typeof document.webkitHidden !== "undefined") {
+        hidden = "webkitHidden";
+        visChangeAction = "webkitvisibilitychange";
+    }
+
+    UI_Periodic_Updater.warn_if_visibility_not_supported(visChangeAction);
+    if (visChangeAction !== undefined) {
+      document.addEventListener(visChangeAction, () => {
+        const app_hidden = document[hidden];
+        app_hidden? this.app_became_hidden() : this.app_became_visible();
+      });
+    }
   }
 };
 
@@ -374,6 +438,38 @@ class SpotifyProxy {
     });
   }
 
+  getPlayingNow() {
+    return this._spApi('GET', 'me/player/currently-playing').then(playingNow => {
+      const pickImg = imgs => {
+        if (!imgs || imgs.length == 0) {
+          return "https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG";
+        }
+
+        const tgtWidth = 300;
+        let selected = 0;
+        let selectedD = 99999;
+        for (let i=1; i < imgs.length; ++i) {
+          const d = Math.abs(imgs[i].width - tgtWidth);
+          if (d < selectedD) {
+            selected = i;
+            selectedD = d;
+          }
+        }
+
+        return imgs[selected].url;
+      };
+
+      if (!playingNow.is_playing) return null;
+      return {
+        songName: playingNow.item?.name,
+        artist: playingNow.item?.artists?.[0].name,
+        album: playingNow.item?.album?.name,
+        album_uri: playingNow.item?.album?.uri,
+        album_img: pickImg(playingNow.item?.album?.images),
+      };
+    });
+  }
+
   play(obj) {
     return this._spApi('PUT', 'me/player/play', {'context_uri': obj.uri});
   }
@@ -403,6 +499,74 @@ class SpotifyProxy {
   }
 };
 
+class UI_PlayerCtrl {
+  constructor(spProxy) {
+    this.spProxy = spProxy;
+  }
+
+  notifyUILoaded() {
+    this._installButtonCbs();
+    this.onTick();
+  }
+
+  onTick() {
+    this.updateAvailableDevices();
+    this.updatePlayingNow();
+  }
+
+  updateAvailableDevices() {
+    this.spProxy.getAvailableDevices().then(devs  => {
+      $('#playctrls_device').html('');
+      $.each(devs, (_, dev) => {
+        $('#playctrls_device').append($('<option/>').val(dev.id).text(dev.name));
+        if (dev.is_active) {
+          $('#playctrls_device select').val(dev.id);
+          $('#playctrls_vol').val(dev.volume_percent);
+        }
+      });
+    });
+  }
+
+  updatePlayingNow() {
+    this.spProxy.getPlayingNow().then(playingNow => {
+      const playCtrls = document.getElementById('playctrls');
+      if (!playingNow) {
+        playCtrls.classList.remove('somethingPlaying');
+        playCtrls.classList.add('nothingPlaying');
+      } else {
+        playCtrls.classList.add('somethingPlaying');
+        playCtrls.classList.remove('nothingPlaying');
+
+        $("#playingNow_StatusImg").attr("src", playingNow.album_img);
+        $("#playingNow_statusLine1").html(playingNow.songName);
+        $("#playingNow_statusLine2").html(`<a href="${playingNow.album_uri}">${playingNow.album}</a>` +  
+                                          `<a href="${playingNow.album_uri}">${playingNow.artist}</a>`);
+      }
+    });
+  }
+
+  _installButtonCbs() {
+    $('#playctrls_device').change(() => {
+      $('#playctrls_device option:selected').each((idx, opt) => {
+        const dev_id = opt.value;
+        const dev_name = opt.text;
+        sp.setActiveDevice(opt.value).then(_ => {
+          console.log("Selected new device", dev_name);
+        });
+      });
+    });
+
+    $('#playctrls_vol').change(_ => {
+      console.log("Set vol", $('#playctrls_vol').val());
+      sp.setVolume($('#playctrls_vol').val());
+    });
+
+    $('#playctrls_prev').click(_ => { sp.playPrev(); });
+    $('#playctrls_play').click(_ => { sp.playPause(); });
+    $('#playctrls_next').click(_ => { sp.playNext(); });
+  }
+}
+
 const HISTORY_CNT_LAST_ARTS_PLAYED = 10;
 const MAX_CACHE_AGE_SECS = 60 * 60 * 24 * 3;
 
@@ -411,6 +575,8 @@ const collection = new CollectionManager(storage);
 const recentlyPlayed = new RecentlyPlayed(storage, HISTORY_CNT_LAST_ARTS_PLAYED);
 const ui = new UI_Builder(recentlyPlayed);
 const sp = new SpotifyProxy(storage);
+const playerUi = new UI_PlayerCtrl(sp);
+const tick = new UI_Periodic_Updater();
 
 function rebuildRecentlyPlayed() {
   $('#recently_played').html(ui.buildRecentlyPlayed());
@@ -458,39 +624,9 @@ function reload(useCache=true) {
     collection.fetch(cb);
 }
 
-function buildPlayerCtrl() {
-  sp.getAvailableDevices().then(devs  => {
-    $.each(devs, (_, dev) => {
-      $('#playctrls_device').append($('<option/>').val(dev.id).text(dev.name));
-      if (dev.is_active) {
-        $('#playctrls_device select').val(dev.id);
-        $('#playctrls_vol').val(dev.volume_percent);
-      }
-    });
-  });
-
-  $('#playctrls_device').change(() => {
-    $('#playctrls_device option:selected').each((idx, opt) => {
-      const dev_id = opt.value;
-      const dev_name = opt.text;
-      sp.setActiveDevice(opt.value).then(_ => {
-        console.log("Selected new device", dev_name);
-      });
-    });
-  });
-
-  $('#playctrls_vol').change(_ => {
-    console.log("Set vol", $('#playctrls_vol').val());
-    sp.setVolume($('#playctrls_vol').val());
-  });
-
-  $('#playctrls_prev').click(_ => { sp.playPrev(); });
-  $('#playctrls_play').click(_ => { sp.playPause(); });
-  $('#playctrls_next').click(_ => { sp.playNext(); });
-}
-
 document.addEventListener('DOMContentLoaded', _ => {
-  buildPlayerCtrl();
+  playerUi.notifyUILoaded();
+  tick.installCallback(_ => { playerUi.onTick(); }, 10 * 1000);
   reload();
 
   document.getElementById('refreshCollection').addEventListener('click', _ => {
