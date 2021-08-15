@@ -459,7 +459,7 @@ class SpotifyProxy {
         return imgs[selected].url;
       };
 
-      if (!playingNow.is_playing) return null;
+      if (!playingNow?.is_playing) return null;
       return {
         songName: playingNow.item?.name,
         artist: playingNow.item?.artists?.[0].name,
@@ -539,7 +539,7 @@ class UI_PlayerCtrl {
 
         $("#playingNow_StatusImg").attr("src", playingNow.album_img);
         $("#playingNow_statusLine1").html(playingNow.songName);
-        $("#playingNow_statusLine2").html(`<a href="${playingNow.album_uri}">${playingNow.album}</a>` +  
+        $("#playingNow_statusLine2").html(`<a href="${playingNow.album_uri}">${playingNow.album}</a>| ` +  
                                           `<a href="${playingNow.album_uri}">${playingNow.artist}</a>`);
       }
     });
