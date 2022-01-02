@@ -592,6 +592,7 @@ ui.onArtistClicked(art => {
   recentlyPlayed.add(art.name);
   rebuildRecentlyPlayed();
   sp.play(art).then(_ => {
+    playerUi.updatePlayingNow(); 
     window.location = art.uri;
   });
 });
@@ -600,6 +601,7 @@ ui.onAlbumClicked((art,album) => {
   recentlyPlayed.add(art.name);
   rebuildRecentlyPlayed();
   sp.play(album).then(_ => {
+    playerUi.updatePlayingNow(); 
     window.location = album.uri;
   });
 });
