@@ -1,173 +1,7 @@
-class W {
-  static reqsOnFlight = 0;
-
-  static maybeShowLoadingUi() {
-    const clock = (t) => {
-      const hr = Math.floor(t);
-      const hf = t - Math.floor(t);
-      const hr12 = hr % 12? hr % 12 : 12;
-      const clck = 128335 + hr12 + (hf? 12 : 0);
-      return `&#${clck};`;
-    };
-
-    const run = () => {
-      if (W.reqsOnFlight == 0) {
-        $('#loading').hide();
-        clearInterval(W.loadUiUpdateTask);
-      }
-      $('#loading').html(`${clock(W.loadUiClockT)} '&#9749;'`);
-      W.loadUiClockT += 0.5;
-    };
-
-    if (W.reqsOnFlight == 1) {
-      $('#loading').show();
-      W.loadUiClockT = 0.0;
-      W.loadUiUpdateTask = setInterval(run, 50);
-    }
-  }
-
-  static showErrorUi(msg) {
-    $('#error').show()
-    $('#error').html(msg);
-    setTimeout(() => $('#error').hide(), 3000);
-  }
-
-  static get(params) {
-    const origComplete = params.complete || (() => {});
-    params.complete = (dataOrReqObj, stat, objOrErr) => {
-      W.reqsOnFlight--;
-
-      const httpStat = dataOrReqObj.status;
-      if (stat != 'success' && httpStat > 299) {
-        W.showErrorUi(JSON.stringify(objOrErr));
-      }
-
-      origComplete(dataOrReqObj, stat, objOrErr);
-    };
-
-    W.reqsOnFlight++;
-    W.maybeShowLoadingUi();
-    return $.ajax(params);
-  }
-
-  static getJson(url, cb) {
-    return W.get({
-      type: 'GET',
-      dataType: 'json',
-      contentType: 'application/json',
-      processData: false,
-      url: url,
-      success: cb,
-    });
-  }
-};
-
-class UI_Periodic_Updater {
-  constructor(cb, intervalMs) {
-    this.bgTask = null;
-    this.callback = null;
-    this.install_visibility_callback();
-  }
-
-  installCallback(cb, intervalMs) {
-    this.callback = cb;
-    this.intervalMs = intervalMs;
-    this.reinstallTicker();
-  }
-
-  app_became_hidden() {
-    if (this.bgTask != null) {
-      clearInterval(this.bgTask);
-    }
-  }
-
-  reinstallTicker() {
-    if (this.bgTask == null && this.callback != null) {
-      this.bgTask = setInterval(this.callback, this.intervalMs);
-    }
-  }
-
-  app_became_visible() {
-    this.callback();
-    this.reinstallTicker();
-  }
-
-  static warn_if_visibility_not_supported(visChangeAction) {
-    if (this.visibility_checked !== undefined) return;
-    this.visibility_checked = true;
-    if (visChangeAction === undefined) {
-      console.log("Visibility changes not supported: UI elements won't auto-refresh");
-    }
-  }
-
-  install_visibility_callback() {
-    if (this.vis_cb_installed !== undefined) return;
-    this.vis_cb_installed = true;
-
-    var hidden, visChangeAction;
-    if (typeof document.hidden !== "undefined") { // Opera 12.10 and Firefox 18 and later support
-        hidden = "hidden";
-        visChangeAction = "visibilitychange";
-    } else if (typeof document.msHidden !== "undefined") {
-        hidden = "msHidden";
-        visChangeAction = "msvisibilitychange";
-    } else if (typeof document.webkitHidden !== "undefined") {
-        hidden = "webkitHidden";
-        visChangeAction = "webkitvisibilitychange";
-    }
-
-    UI_Periodic_Updater.warn_if_visibility_not_supported(visChangeAction);
-    if (visChangeAction !== undefined) {
-      document.addEventListener(visChangeAction, () => {
-        const app_hidden = document[hidden];
-        app_hidden? this.app_became_hidden() : this.app_became_visible();
-      });
-    }
-  }
-};
-
-class LocalStorageManager {
-  constructor(max_cache_age_secs) {
-    this.max_cache_age_secs = max_cache_age_secs;
-    this.cache_idx = this.get('cache_idx', {});
-    if (typeof(this.cache_idx) != typeof({})) {
-      W.showErrorUi("Can't read local storage, will clear cache");
-      this.cache_idx = {};
-      this.save('cache_idx', this.cache_idx);
-      localStorage.clear();
-    }
-  }
-
-  get(key, default_val) {
-    try {
-      const v = JSON.parse(localStorage.getItem(key));
-      return v? v : default_val;
-    } catch (e) {
-      return default_val;
-    }
-  }
-
-  save(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
-  }
-
-  cacheGet(key) {
-    const last_update = this.cache_idx[key] || 0;
-    const age = Date.now() - last_update;
-    const cache_is_old = (age > 1000 * this.max_cache_age_secs);
-    if (cache_is_old) {
-      localStorage.removeItem(key);
-      return null;
-    }
-    return this.get(key, null);
-  }
-
-  cacheSave(key, val) {
-    this.cache_idx[key] = Date.now();
-    this.save('cache_idx', this.cache_idx);
-    this.save(key, val);
-  }
-};
+import { GlobalUI } from './GlobalUI.js';
+import { W } from './wget.js';
+import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
+import { LocalStorageManager } from './LocalStorageManager.js';
 
 class CollectionManager {
   constructor(storage) {
@@ -186,7 +20,7 @@ class CollectionManager {
   cachedFetch(cb) {
     const col = this.storage.cacheGet('collection');
     if (col) return cb(col);
-    W.showErrorUi("Collection cache not valid, refetching");
+    GlobalUI.showErrorUi("Collection cache not valid, refetching");
     return this.fetch(cb);
   }
 };
@@ -396,14 +230,14 @@ class SpotifyProxy {
       req.error = e => {
         const spe = e?.responseJSON?.error;
         if (spe?.status == 404 && spe?.reason == 'NO_ACTIVE_DEVICE') {
-          W.showErrorUi("No active device: trying to set active device");
+          GlobalUI.showErrorUi("No active device: trying to set active device");
           this._setActiveDevice().then(_ => {
             // Don't retry again
-            req.error = W.showErrorUi;
+            req.error = GlobalUI.showErrorUi;
             W.get(req);
           });
         } else {
-          W.showErrorUi(JSON.stringify(e));
+          GlobalUI.showErrorUi(JSON.stringify(e));
         }
       }
 
@@ -491,7 +325,7 @@ class SpotifyProxy {
 
     this._spApi('GET', `artists/${artist_id}/albums?limit=50&include_groups=album,single`).then( resp => {
       if (resp.items > 45) {
-        W.showErrorUi(`Albums for artist ${artist_id} requires pagination. Not implemented`);
+        GlobalUI.showErrorUi(`Albums for artist ${artist_id} requires pagination. Not implemented`);
       }
       this.cache.cacheSave(`album_list_for_${artist_id}`, resp.items);
       cb(resp.items);
@@ -576,7 +410,7 @@ const recentlyPlayed = new RecentlyPlayed(storage, HISTORY_CNT_LAST_ARTS_PLAYED)
 const ui = new UI_Builder(recentlyPlayed);
 const sp = new SpotifyProxy(storage);
 const playerUi = new UI_PlayerCtrl(sp);
-const tick = new UI_Periodic_Updater();
+const tick = new UiPeriodicUpdater();
 
 function rebuildRecentlyPlayed() {
   $('#recently_played').html(ui.buildRecentlyPlayed());

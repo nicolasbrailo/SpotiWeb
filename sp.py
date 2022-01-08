@@ -15,9 +15,8 @@ except:
     print("Config file not found. Please read the README")
     exit(1)
 
-#sp_scopes = "app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read"
 AUTH = spotipy.oauth2.SpotifyOAuth(
-        scope="user-follow-read",
+        scope="user-follow-read app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read",
         username=CFG["sp_username"],
         client_id=CFG["sp_client_id"],
         client_secret=CFG["sp_client_secret"],
