@@ -1,7 +1,10 @@
-import { GlobalUI } from './GlobalUI.js';
+import { GlobalUI, UI_Builder } from './ui.js';
 import { W } from './wget.js';
 import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
 import { LocalStorageManager } from './LocalStorageManager.js';
+
+// If true, will try to open the native client whenever a link is clicked (eg open the artist page in the native Spotify client)
+const gOpenLinkInNativeClient = false;
 
 class CollectionManager {
   constructor(storage) {
@@ -46,151 +49,6 @@ class RecentlyPlayed {
     }
 
     this.storage.save('lastPlayed', newLastPlayed);
-  }
-};
-
-class UI_Builder {
-  static self = null;
-  constructor(recentlyPlayed) {
-    this.recentlyPlayed = recentlyPlayed;
-    this.onArtistClickedCb = console.log;
-    this.onArtistExpandClickedCb = console.log;
-    this.onAlbumClickedCb = console.log;
-    this.known_albums = {};
-    // A unique id to represent each tile. Same artist may have multiple 
-    // tiles in different sections
-    this.art_tile_unique_id = 42;
-    UI_Builder.self = this;
-  }
-
-  setCollection(col) {
-    this.collection = col;
-  }
-
-  buildGenreHref(gen) {
-    return gen.replaceAll(' ', '-');
-  }
-
-  onAlbumClicked(cb) {this.onAlbumClickedCb = cb; }
-  static trampolineOnAlbumClicked(art_name, album_id) {
-    const art_obj = UI_Builder.self.collection.artists[art_name];
-    const album_obj = UI_Builder.self.known_albums[album_id];
-    UI_Builder.self.onAlbumClickedCb(art_obj, album_obj);
-  }
-
-  onToggleArtistExtendedViewClicked(cb) { this.onArtistExpandClickedCb = cb; }
-  static trampolineToggleArtistExtendedView(tile_id, art_name) {
-    const art_obj = UI_Builder.self.collection.artists[art_name];
-    UI_Builder.self.onArtistExpandClickedCb(tile_id, art_obj);
-  }
-
-  onArtistClicked(cb) { this.onArtistClickedCb = cb; }
-  static trampolineOnArtistClicked(art) {
-    const art_obj = UI_Builder.self.collection.artists[art];
-    UI_Builder.self.onArtistClickedCb(art_obj);
-  }
-
-  buildSingleArt(art) {
-    const art_info = this.collection.artists[art];
-    const unique_id = this.art_tile_unique_id++;
-    if (!art_info) {
-      return `<li><img src="https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG"/>${art}</li>`;
-    } else {
-      const imgurl = art_info.img? art_info.img : "https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG";
-      return `<li id='art${unique_id}_node_${art_info.id}'>
-              <div class="expandView" onclick='UI_Builder.trampolineToggleArtistExtendedView("${unique_id}", "${art}")'>&#9660;</div>
-              <a href='javascript:' onclick='UI_Builder.trampolineOnArtistClicked("${art}")'>
-                <img src='${imgurl}'/>
-                ${art}
-              </a>
-              <div id='art${unique_id}_extended_info_${art_info.id}'>...</div>
-              </li>`;
-    }
-  }
-
-  toggleExtendedView(tile_id, art_id) {
-    const art_view = document.getElementById(`art${tile_id}_node_${art_id}`);
-    const art_extended_view = document.getElementById(`art${tile_id}_extended_info_${art_id}`);
-
-    if (art_view.classList.contains('selected')) {
-      art_view.classList.remove('selected');
-      art_extended_view.classList.remove('selected');
-      return null;
-    } else {
-      // Remove class from all elements, so only one will have it
-      $(".selected").removeClass("selected");
-      art_view.classList.add('selected');
-      art_extended_view.classList.add('selected');
-      return art_extended_view;
-    }
-  }
-
-  buildGenres() {
-    return this.collection.genres.map(gen => `<li><a href="#${this.buildGenreHref(gen)}">${gen}</a></li>`);
-  }
-
-  buildArts() {
-    return this.collection.genres.map( gen => {
-      const art_lst = this.collection.artists_by_genre[gen].map(art => this.buildSingleArt(art)).join('');
-      return `<h2 id='${this.buildGenreHref(gen)}'>${gen}</h2>
-              <ul class='arts'>${art_lst}</ul>`;
-    }).join('');
-  }
-
-  buildRecentlyPlayed() {
-    const lastPlayed = this.recentlyPlayed.get();
-    if (lastPlayed.length == 0) return '';
-    const lastPlayedUi = lastPlayed.map(art => this.buildSingleArt(art)).join('');
-    return `<h2>Recently played</h2><ul class='arts'>${lastPlayedUi}</ul>`;
-  }
-
-  buildExtendedView(art_name, albums) {
-    const art = this.collection.artists[art_name];
-    const genres = art.genres
-                    .filter(gen => this.collection.genres.includes(gen))
-                    .map(gen => `<li><a href=#${this.buildGenreHref(gen)}>${gen}</a><li>`)
-                    .join('');
-    const genres_view = (genres.length == 0)? '' : `<p class="genresList">More:</p><ul class="genresList">${genres}</ul>`
-    return genres_view + this.buildAlbumList(art_name, albums);
-  }
-
-  buildAlbumList(art_name, albums) {
-    const imgClosestTo200 = imgs => {
-      if (!imgs || !Array.isArray(imgs) || imgs.length == 0) {
-        return "https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG";
-      }
-
-      const tgt_height = 250;
-      var closest_idx = 0;
-      for (var i=1; i<imgs.length; ++i) {
-        const delta = Math.abs(imgs[i].height - tgt_height);
-        const delta_min = Math.abs(imgs[closest_idx].height - tgt_height);
-        if (delta < delta_min) closest_idx = i;
-      }
-      return imgs[closest_idx].url;
-    };
-
-    var seen_albums = [];
-    const lst = albums.map(album => {
-      // Remove duplicates
-      const seen = album.release_date + album.name + album.total_tracks;
-      if (seen_albums.includes(seen)) return '';
-      seen_albums.push(seen);
-
-      // Save this album to look it up again in the onClick callback
-      this.known_albums[album.id] = album;
-
-      var albumtype = '';
-      if (album.album_type == 'single') albumtype = '-Single:';
-
-      return `<li class='album_info'>
-                <a href='javascript:' onclick='UI_Builder.trampolineOnAlbumClicked("${art_name}", "${album.id}")'>
-                  <img src='${imgClosestTo200(album.images)}'/>
-                  ${(new Date(album.release_date)).getFullYear()}${albumtype} ${album.name}
-                </a>
-              </li>`
-    }).join('');
-    return `<ul class='albums'>${lst}</ul>`;
   }
 };
 
@@ -314,7 +172,7 @@ class SpotifyProxy {
 
   playPause() {
     this._spApi('GET', 'me/player').then(p => {
-      const action = p.is_playing? 'me/player/pause' : 'me/player/play';
+      const action = p?.is_playing? 'me/player/pause' : 'me/player/play';
       this._spApi('PUT', action, {}); 
     });
   }
@@ -352,11 +210,12 @@ class UI_PlayerCtrl {
     this.spProxy.getAvailableDevices().then(devs  => {
       $('#playctrls_device').html('');
       $.each(devs, (_, dev) => {
-        $('#playctrls_device').append($('<option/>').val(dev.id).text(dev.name));
+        let selected = "";
         if (dev.is_active) {
-          $('#playctrls_device select').val(dev.id);
           $('#playctrls_vol').val(dev.volume_percent);
+          selected = "selected";
         }
+        $('#playctrls_device').append(`<option value="${dev.id}" ${selected}>${dev.name}</option>`);
       });
     });
   }
@@ -427,7 +286,9 @@ ui.onArtistClicked(art => {
   rebuildRecentlyPlayed();
   sp.play(art).then(_ => {
     playerUi.updatePlayingNow(); 
-    window.location = art.uri;
+    if (gOpenLinkInNativeClient) {
+      window.location = art.uri;
+    }
   });
 });
 
@@ -436,7 +297,9 @@ ui.onAlbumClicked((art,album) => {
   rebuildRecentlyPlayed();
   sp.play(album).then(_ => {
     playerUi.updatePlayingNow(); 
-    window.location = album.uri;
+    if (gOpenLinkInNativeClient) {
+      window.location = album.uri;
+    }
   });
 });
 
@@ -469,4 +332,41 @@ document.addEventListener('DOMContentLoaded', _ => {
     reload(false);
   });
 });
+
+window.player = 42;
+window.onSpotifyWebPlaybackSDKReady = () => {
+  W.getJson("/api/get_tok", auth => {
+    player = new Spotify.Player({
+      name: 'Web Playback SDK Quick Start Player',
+      getOAuthToken: cb => { cb(auth.Authorization.split(' ')[1]); },
+      volume: 0.5
+    });
+
+    // Ready
+    player.addListener('ready', ({ device_id }) => {
+      console.log('Ready with Device ID', device_id);
+    });
+
+    // Not Ready
+    player.addListener('not_ready', ({ device_id }) => {
+      console.log('Device ID has gone offline', device_id);
+    });
+
+    player.addListener('initialization_error', ({ message }) => {
+        console.error(message);
+    });
+
+    player.addListener('authentication_error', ({ message }) => {
+        console.error(message);
+    });
+
+    player.addListener('account_error', ({ message }) => {
+        console.error(message);
+    });
+
+    console.log("CONN");
+    player.connect();
+    window.player = player;
+  });
+};
 

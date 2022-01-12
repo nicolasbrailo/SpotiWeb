@@ -1,4 +1,4 @@
-import { GlobalUI } from './GlobalUI.js';
+import { GlobalUI } from './ui.js';
 
 export class W {
   static get(params) {

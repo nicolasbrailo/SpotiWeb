@@ -16,7 +16,7 @@ except:
     exit(1)
 
 AUTH = spotipy.oauth2.SpotifyOAuth(
-        scope="user-follow-read app-remote-control user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-follow-read",
+        scope="app-remote-control streaming user-follow-read user-library-read user-modify-playback-state user-read-currently-playing user-read-email user-read-playback-state user-read-private",
         username=CFG["sp_username"],
         client_id=CFG["sp_client_id"],
         client_secret=CFG["sp_client_secret"],

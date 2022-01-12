@@ -1,4 +1,4 @@
-import { GlobalUI } from './GlobalUI.js';
+import { GlobalUI } from './ui.js';
 
 export class LocalStorageManager {
   constructor(max_cache_age_secs) {
