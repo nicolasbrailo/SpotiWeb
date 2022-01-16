@@ -29,41 +29,36 @@ export class UiSettings {
     });
 
     $('#settings_reload').click(_ => {
-      console.log("TODO");
+      // TODO global
+      reload(false);
     });
 
     $('#settings_tileSize').change(() => {
-      const tileCssSelector = ".arts li img";
-      let tileCss = null;
-
-      for (let rule of document.styleSheets[0].cssRules) {
-        if (rule.selectorText == tileCssSelector) {
-          tileCss = rule;
-          break;
+      function css(selector) {
+        for (let rule of document.styleSheets[0].cssRules) {
+          if (rule.selectorText == selector) {
+            return rule;
+          }
         }
-      }
 
-      if (!tileCssSelector) {
-        GlobalUI.showErrorUi(`Can't find tile style with selector "${tileCssSelector}"`);
-        return;
-      }
+        GlobalUI.showErrorUi(`Can't find tile style with selector "${selector}"`);
+        return null;
+      };
 
       const elm = document.getElementById('settings_tileSize');
       const range = elm.max - elm.min;
       const pct = 1.0 * (elm.value - elm.min) / range;
-      console.log(tileCss.style.width);
-      console.log(pct);
-      tileCss.style.width = (200 * pct) + "px";
-      tileCss.style.height = (200 * pct) + "px";
+      const newSize = (200 * pct) + "px";
+
+      css(".arts li").style.width = newSize;
+      css(".arts li a").style.width = newSize;
+      css(".arts li img").style.width = newSize;
+      css(".arts li img").style.height = newSize;
+      css(".arts li.selected a").style.width = newSize;
     });
 
     $('#settings_openLinksInNativeClient').click((x) => {
       console.log(x)
-    });
-
-    $('#refreshCollection').click((x) => {
-      // TODO global
-      reload(false);
     });
   }
 }
