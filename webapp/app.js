@@ -9,16 +9,13 @@ import { W } from './wget.js';
 
 const spotifySdkLoaded = $.Deferred();
 
-const HISTORY_CNT_LAST_ARTS_PLAYED = 10;
-const MAX_CACHE_AGE_SECS = 60 * 60 * 24 * 3;
-
-const storage = new LocalStorageManager(MAX_CACHE_AGE_SECS);
+const storage = new LocalStorageManager();
+const settingsUi = new UiSettings(storage);
 const collection = new CollectionManager(storage);
-const recentlyPlayed = new RecentlyPlayed(storage, HISTORY_CNT_LAST_ARTS_PLAYED);
+const recentlyPlayed = new RecentlyPlayed(storage, settingsUi.recentlyPlayedCount);
 const ui = new UI_Builder(recentlyPlayed);
 const sp = new SpotifyProxy(storage);
 const playerUi = new UiMiniPlayerCtrl(sp);
-const settingsUi = new UiSettings(storage);
 const tick = new UiPeriodicUpdater();
 
 function createLocalSpotifyClient() {
@@ -80,6 +77,10 @@ function reload(useCache=true) {
 }
 
 settingsUi.onThingsAreBroken(reload);
+settingsUi.onRecentlyPlayedCountChange(cnt => {
+  recentlyPlayed.setRecentlyPlayedCount(cnt);
+  rebuildRecentlyPlayed();
+});
 
 window.onSpotifyWebPlaybackSDKReady = spotifySdkLoaded.resolve;
 

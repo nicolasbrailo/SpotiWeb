@@ -1,9 +1,11 @@
 import { GlobalUI } from './ui.js';
 import { W } from './wget.js';
 
+const MAX_CACHE_AGE_SECS = 60 * 60 * 24 * 3;
+
 export class LocalStorageManager {
-  constructor(max_cache_age_secs) {
-    this.max_cache_age_secs = max_cache_age_secs;
+  constructor() {
+    this.max_cache_age_secs = MAX_CACHE_AGE_SECS;
     this.cache_idx = this.get('cache_idx', {});
     if (typeof(this.cache_idx) != typeof({})) {
       GlobalUI.showErrorUi("Can't read local storage, will clear cache");
@@ -72,6 +74,13 @@ export class RecentlyPlayed {
     this.maxEntries = maxEntries;
   }
 
+  setRecentlyPlayedCount(cnt) {
+    console.log(`Will remember ${cnt} recently played entries`);
+    this.maxEntries = cnt;
+    // Trigger rebuild to remove entries over limit
+    this.add(null);
+  }
+
   get() {
     var lastPlayed = this.storage.get('lastPlayed', []);
     if (!Array.isArray(lastPlayed)) return [];
@@ -80,7 +89,10 @@ export class RecentlyPlayed {
 
   add(art) {
     var newLastPlayed = this.get().filter(x => x != art);
-    newLastPlayed.push(art);
+
+    if (art != null) {
+      newLastPlayed.push(art);
+    }
 
     if (newLastPlayed.length > this.maxEntries) {
       newLastPlayed = newLastPlayed.slice(1, this.maxEntries + 1);

@@ -1,3 +1,4 @@
+import { GlobalUI } from './ui.js';
 
 function getCss(selector) {
   for (let rule of document.styleSheets[0].cssRules) {
@@ -12,6 +13,12 @@ function getCss(selector) {
 
 export class UiSettings {
   constructor(localStorage) {
+    this.thingsAreBrokenCb = null;
+    this.recentlyPlayedCountChange = null;
+    this.localStorage = localStorage;
+    this.hidden = true;
+
+    // Configure UI size
     this.TILE_SIZE_STORAGE_KEY = "settings_tileSize_pct";
 
     this.defaultTileHeight = parseFloat(getCss(".arts li").style.height);
@@ -35,12 +42,13 @@ export class UiSettings {
     // Buttons (like tile expand) are a bit bigger than default font
     this.defaultCssButtonFontSize = this.defaultCssFontSize + 3;
 
-    this.thingsAreBrokenCb = null;
-    this.localStorage = localStorage;
-    this.hidden = true;
-
+    // Configure link behavior
     this.OPEN_LINKS_IN_NATIVE_CLIENT_KEY = "settings_openLinksInNativeClient";
     this.openLinksInNativeClient = this.localStorage.get(this.OPEN_LINKS_IN_NATIVE_CLIENT_KEY, false);
+
+    // Configure default recently-played size
+    this.RECENTLY_PLAYED_COUNT_KEY = "settings_recentlyPlayedCount";
+    this.recentlyPlayedCount = this.localStorage.get(this.RECENTLY_PLAYED_COUNT_KEY, 10);
   }
 
   notifyUILoaded() {
@@ -52,6 +60,10 @@ export class UiSettings {
 
   onThingsAreBroken(cb) {
     this.thingsAreBrokenCb = cb;
+  }
+
+  onRecentlyPlayedCountChange(cb) {
+    this.recentlyPlayedCountChange = cb;
   }
 
   _installButtonCbs() {
@@ -82,6 +94,19 @@ export class UiSettings {
     $('#settings_openLinksInNativeClient').click((x) => {
       this.openLinksInNativeClient = !this.openLinksInNativeClient;
       this.localStorage.save(this.OPEN_LINKS_IN_NATIVE_CLIENT_KEY, this.openLinksInNativeClient);
+    });
+
+    $('#settings_recentlyPlayedCount').val(this.recentlyPlayedCount);
+    $('#settings_recentlyPlayedCount').change(() => {
+      const cntUserInput = $('#settings_recentlyPlayedCount').val();
+      const cnt = parseInt(cntUserInput);
+      if (isNaN(cnt)) {
+        GlobalUI.showErrorUi(`${cnt} isn't a number`);
+      } else {
+        this.recentlyPlayedCount = cnt;
+        this.localStorage.save(this.RECENTLY_PLAYED_COUNT_KEY, cnt);
+        if (this.recentlyPlayedCountChange) this.recentlyPlayedCountChange(cnt);
+      }
     });
   }
 
