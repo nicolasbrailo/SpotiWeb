@@ -4,69 +4,8 @@ import { SpotifyLocalPlayer } from './SpotifyLocalPlayer.js';
 import { SpotifyProxy } from './SpotifyProxy.js';
 import { UiMiniPlayerCtrl } from './UiMiniPlayerCtrl.js';
 import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
+import { UiSettings } from './settings.js';
 import { W } from './wget.js';
-
-
-export class UiSettings {
-  constructor(localStorage) {
-    this.localStorage = localStorage;
-    this.hidden = true;
-  }
-
-  notifyUILoaded() {
-    this._installButtonCbs();
-  }
-
-  _installButtonCbs() {
-    $('#settings_toggle').click(_ => {
-      const settingsUi = document.getElementById('settings');
-      this.hidden = !this.hidden;
-      if (this.hidden) {
-        settingsUi.classList.add('settingsHidden');
-      } else {
-        settingsUi.classList.remove('settingsHidden');
-      }
-    });
-
-    $('#settings_reload').click(_ => {
-      // TODO global
-      reload(false);
-    });
-
-    $('#settings_tileSize').change(() => {
-      function css(selector) {
-        for (let rule of document.styleSheets[0].cssRules) {
-          if (rule.selectorText == selector) {
-            return rule;
-          }
-        }
-
-        GlobalUI.showErrorUi(`Can't find tile style with selector "${selector}"`);
-        return null;
-      };
-
-      const elm = document.getElementById('settings_tileSize');
-      const range = elm.max - elm.min;
-      const pct = 1.0 * (elm.value - elm.min) / range;
-      const newSize = (200 * pct) + "px";
-
-      css(".arts li").style.width = newSize;
-      css(".arts li a").style.width = newSize;
-      css(".arts li img").style.width = newSize;
-      css(".arts li img").style.height = newSize;
-      css(".arts li.selected a").style.width = newSize;
-    });
-
-    $('#settings_openLinksInNativeClient').click((x) => {
-      console.log(x)
-    });
-  }
-}
-
-
-// If true, will try to open the native client whenever a link is clicked (eg open the artist page in the native Spotify client)
-const gOpenLinkInNativeClient = false;
-const gSpotifyWebClientName = 'Spotiwebos';
 
 const spotifySdkLoaded = $.Deferred();
 
@@ -83,7 +22,7 @@ const settingsUi = new UiSettings(storage);
 const tick = new UiPeriodicUpdater();
 
 function createLocalSpotifyClient() {
-  const localPlayer = new SpotifyLocalPlayer(gSpotifyWebClientName, storage);
+  const localPlayer = new SpotifyLocalPlayer('Spotiwebos', storage);
   sp.setLocalPlayer(localPlayer);
   playerUi.updateAvailableDevices();
   // Make it globally available
@@ -99,7 +38,7 @@ ui.onArtistClicked(art => {
   rebuildRecentlyPlayed();
   sp.play(art).then(_ => {
     playerUi.updatePlayingNow(); 
-    if (gOpenLinkInNativeClient) {
+    if (settingsUi.openLinksInNativeClient) {
       window.location = art.uri;
     }
   });
@@ -110,7 +49,7 @@ ui.onAlbumClicked((art,album) => {
   rebuildRecentlyPlayed();
   sp.play(album).then(_ => {
     playerUi.updatePlayingNow(); 
-    if (gOpenLinkInNativeClient) {
+    if (settingsUi.openLinksInNativeClient) {
       window.location = album.uri;
     }
   });
@@ -139,6 +78,8 @@ function reload(useCache=true) {
     collection.cachedFetch(cb) :
     collection.fetch(cb);
 }
+
+settingsUi.onThingsAreBroken(reload);
 
 window.onSpotifyWebPlaybackSDKReady = spotifySdkLoaded.resolve;
 

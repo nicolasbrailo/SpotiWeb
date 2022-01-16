@@ -20,6 +20,10 @@ body {
   overflow: hidden;
 }
 
+#settings #settings_recentlyPlayedCount {
+  width: 20px;
+}
+
 #playctrls {
   z-index: 99;
   position: fixed;
@@ -130,6 +134,7 @@ a {
   width: 200px;
   height: 225px;
   text-align: center;
+  font-size: 25px;
 }
 
 .arts li .expandView {
