@@ -43,3 +43,50 @@ export class LocalStorageManager {
   }
 };
 
+export class CollectionManager {
+  constructor(storage) {
+    this.storage = storage;
+  }
+
+  fetch(cb) {
+    W.getJson("/api/fetch_all", col => {
+      col.genres.sort();
+      $.each(col.artists_by_genre, (_,arts) => { arts.sort(); });
+      this.storage.cacheSave('collection', col);
+      cb(col);
+    });
+  }
+
+  cachedFetch(cb) {
+    const col = this.storage.cacheGet('collection');
+    if (col) return cb(col);
+    GlobalUI.showErrorUi("Collection cache not valid, refetching");
+    return this.fetch(cb);
+  }
+};
+
+export class RecentlyPlayed {
+  constructor(storage, maxEntries) {
+    this.storage = storage;
+    this.maxEntries = maxEntries;
+  }
+
+  get() {
+    var lastPlayed = this.storage.get('lastPlayed', []);
+    if (!Array.isArray(lastPlayed)) return [];
+    return lastPlayed.reverse();
+  }
+
+  add(art) {
+    var newLastPlayed = this.get().filter(x => x != art);
+    newLastPlayed.push(art);
+
+    if (newLastPlayed.length > this.maxEntries) {
+      newLastPlayed = newLastPlayed.slice(1, this.maxEntries + 1);
+    }
+
+    this.storage.save('lastPlayed', newLastPlayed);
+  }
+};
+
+
