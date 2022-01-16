@@ -134,16 +134,18 @@ a {
   width: 200px;
   height: 225px;
   text-align: center;
-  font-size: 25px;
+  font-size: 20px;
 }
 
 .arts li .expandView {
   z-index: 9;
   cursor: crosshair; 
   display: inline;
-  position: absolute;
-  width: 95px;
-  text-align: right;
+  position: sticky;
+  float: right;
+  direction: rtl;
+  width: 0px;
+  height: 0px;
   font-weight: bold;
   font-size: 25px;
 }
@@ -152,6 +154,7 @@ a {
   position: relative;
   float: right;
   width: 100%;
+  text-align: right;
 }
 
 .arts li a {

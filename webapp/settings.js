@@ -14,10 +14,16 @@ export class UiSettings {
   constructor(localStorage) {
     this.TILE_SIZE_STORAGE_KEY = "settings_tileSize_pct";
 
-    this.defaultCssImageSize = parseFloat(getCss(".arts li").style.width);
-    if (isNaN(this.defaultCssImageSize)) {
-      this.defaultCssImageSize = 200;
-      console.error(`Couldn't retrieve default image size, using ${this.defaultCssImageSize}px`);
+    this.defaultTileHeight = parseFloat(getCss(".arts li").style.height);
+    if (isNaN(this.defaultTileHeight)) {
+      this.defaultTileHeight = 200;
+      console.error(`Couldn't retrieve default tile height, using ${this.defaultTileHeight}px`);
+    }
+
+    this.defaultTileWidth = parseFloat(getCss(".arts li").style.width);
+    if (isNaN(this.defaultTileWidth)) {
+      this.defaultTileWidth = 200;
+      console.error(`Couldn't retrieve default tile width, using ${this.defaultTileWidth}px`);
     }
 
     this.defaultCssFontSize = parseFloat(getCss(".arts li").style.fontSize);
@@ -25,6 +31,9 @@ export class UiSettings {
       this.defaultCssFontSize = 25;
       console.error(`Couldn't retrieve default font size, using ${this.defaultCssFontSize}px`);
     }
+
+    // Buttons (like tile expand) are a bit bigger than default font
+    this.defaultCssButtonFontSize = this.defaultCssFontSize + 3;
 
     this.thingsAreBrokenCb = null;
     this.localStorage = localStorage;
@@ -79,8 +88,12 @@ export class UiSettings {
   resetUiSizes(pct) {
     console.log(`Reset UI to ${pct * 100}%`);
     this.localStorage.save(this.TILE_SIZE_STORAGE_KEY, pct);
-    const newSize = (this.defaultCssImageSize * pct) + "px";
+    const newSize = (this.defaultTileWidth * pct) + "px";
+    const tileHeight = (this.defaultTileHeight * pct) + "px";
     const newFontSize = (this.defaultCssFontSize * pct) + "px";
+    const newButtonFontSize = (this.defaultCssButtonFontSize * pct) + "px";
+
+    getCss(".arts li").style.height = tileHeight;
 
     getCss(".arts li").style.width = newSize;
     getCss(".arts li a").style.width = newSize;
@@ -90,6 +103,8 @@ export class UiSettings {
 
     getCss(".arts li a").style.fontSize = newFontSize;
     getCss(".arts li.selected a").style.fontSize = newFontSize;
+
+    getCss(".arts li .expandView").style.fontSize = newButtonFontSize;
   }
 }
 
