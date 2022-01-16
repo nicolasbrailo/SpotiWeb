@@ -32,8 +32,29 @@ export class UiSettings {
       console.log("TODO");
     });
 
-    $('#settings_tileSize').change((x) => {
-      console.log("TODO", x);
+    $('#settings_tileSize').change(() => {
+      const tileCssSelector = ".arts li img";
+      let tileCss = null;
+
+      for (let rule of document.styleSheets[0].cssRules) {
+        if (rule.selectorText == tileCssSelector) {
+          tileCss = rule;
+          break;
+        }
+      }
+
+      if (!tileCssSelector) {
+        GlobalUI.showErrorUi(`Can't find tile style with selector "${tileCssSelector}"`);
+        return;
+      }
+
+      const elm = document.getElementById('settings_tileSize');
+      const range = elm.max - elm.min;
+      const pct = 1.0 * (elm.value - elm.min) / range;
+      console.log(tileCss.style.width);
+      console.log(pct);
+      tileCss.style.width = (200 * pct) + "px";
+      tileCss.style.height = (200 * pct) + "px";
     });
 
     $('#settings_openLinksInNativeClient').click((x) => {
