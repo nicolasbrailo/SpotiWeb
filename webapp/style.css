@@ -8,15 +8,15 @@ body {
   z-index: 99;
   position: fixed;
   top: 25px;
-  left: 25px;
-  padding: 1px;
+  right: 25px;
+  padding: 3px;
   border: 1px green solid;
   background: black;
 }
 
 #settings.settingsHidden {
   width: 15px;
-  height: 17px;
+  height: 16px;
   overflow: hidden;
 }
 

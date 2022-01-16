@@ -1,4 +1,5 @@
 import { GlobalUI } from './ui.js';
+import { W } from './wget.js';
 
 export class LocalStorageManager {
   constructor(max_cache_age_secs) {

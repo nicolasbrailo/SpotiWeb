@@ -6,6 +6,48 @@ import { UiMiniPlayerCtrl } from './UiMiniPlayerCtrl.js';
 import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
 import { W } from './wget.js';
 
+
+export class UiSettings {
+  constructor(localStorage) {
+    this.localStorage = localStorage;
+    this.hidden = true;
+  }
+
+  notifyUILoaded() {
+    this._installButtonCbs();
+  }
+
+  _installButtonCbs() {
+    $('#settings_toggle').click(_ => {
+      const settingsUi = document.getElementById('settings');
+      this.hidden = !this.hidden;
+      if (this.hidden) {
+        settingsUi.classList.add('settingsHidden');
+      } else {
+        settingsUi.classList.remove('settingsHidden');
+      }
+    });
+
+    $('#settings_reload').click(_ => {
+      console.log("TODO");
+    });
+
+    $('#settings_tileSize').change((x) => {
+      console.log("TODO", x);
+    });
+
+    $('#settings_openLinksInNativeClient').click((x) => {
+      console.log(x)
+    });
+
+    $('#refreshCollection').click((x) => {
+      // TODO global
+      reload(false);
+    });
+  }
+}
+
+
 // If true, will try to open the native client whenever a link is clicked (eg open the artist page in the native Spotify client)
 const gOpenLinkInNativeClient = false;
 const gSpotifyWebClientName = 'Spotiwebos';
@@ -21,6 +63,7 @@ const recentlyPlayed = new RecentlyPlayed(storage, HISTORY_CNT_LAST_ARTS_PLAYED)
 const ui = new UI_Builder(recentlyPlayed);
 const sp = new SpotifyProxy(storage);
 const playerUi = new UiMiniPlayerCtrl(sp);
+const settingsUi = new UiSettings(storage);
 const tick = new UiPeriodicUpdater();
 
 function createLocalSpotifyClient() {
@@ -85,11 +128,8 @@ window.onSpotifyWebPlaybackSDKReady = spotifySdkLoaded.resolve;
 
 document.addEventListener('DOMContentLoaded', _ => {
   playerUi.notifyUILoaded();
+  settingsUi.notifyUILoaded();
   tick.installCallback(_ => { playerUi.onTick(); }, 10 * 1000);
   reload();
-
-  document.getElementById('refreshCollection').addEventListener('click', _ => {
-    reload(false);
-  });
 });
 
