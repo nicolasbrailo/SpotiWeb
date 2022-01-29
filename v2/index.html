@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sp</title>
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" href="favicon.ico" type="image/x-icon"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+        type="text/javascript" 
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
+<link rel="stylesheet" href="style.css">
+<!--script src="https://sdk.scdn.co/spotify-player.js"></script-->
+<script type="module" src="app.js"></script>
+</head>
+<body>
+
+<div id="settings" class="settingsHidden">
+  <a href="javascript:" id="settings_toggle">&#9881;</a><br/>
+
+  <hr/>
+  <button id="settings_reload">Reload broken stuff</button><br/>
+
+  <hr/>
+  Tile size <input  id="settings_tileSize" type="range" min="1" max="10"/><br/>
+
+  <hr/>
+  <input  id="settings_openLinksInNativeClient" type="checkbox"/>
+    <label for="settings_openLinksInNativeClient">Open links in native client</label><br/>
+
+  <hr/>
+  <label for="settings_recentlyPlayedCount"></label>Recently played
+    <input type="number" id="settings_recentlyPlayedCount"/>
+</div>
+
+<div id="playctrls" class="nothingPlaying">
+  <img id="playingNow_StatusImg" src="https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG"></img>
+
+  <div id="playingNow_status">
+    <div id="playingNow_statusLine1"></div>
+    <div id="playingNow_statusLine2"></div>
+  </div>
+
+  <div id="ctrls">
+    <button id="playctrls_prev">&#x23EE;</button>
+    <button id="playctrls_play">&#x23EF;</button>
+    <button id="playctrls_next">&#x23ED;</button>
+    <input  id="playctrls_vol" type="range" min="1" max="100"/>
+    <select id="playctrls_device"></select><br/>
+  </div>
+</div>
+
+<div id="loading">
+  LOADING
+</div>
+
+<div id="error">
+  ERROR
+</div>
+
+<div id="recently_played">
+</div>
+
+<ul id="genres_idx" class='idx'>
+</ul>
+
+<div id="arts_by_gen">
+</div>
+
+</body>
+</html>
