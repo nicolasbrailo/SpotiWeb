@@ -231,6 +231,7 @@ export class SpotifyAuth {
   }
 
   refreshToken(promise=null) {
+    console.log("Refreshing Spotify auth token");
     const done = promise? promise : $.Deferred();
     if (!this.current_tokens.refresh_token) {
       done.reject();
@@ -274,8 +275,11 @@ export class SpotifyAuth {
     }
     this.storage.save(this.SPOTIFY_CURRENT_TOKENS_KEY, this.current_tokens);
 
-    // TODO schedule refresh
-    // this.refreshToken(done);
+    // schedule refresh
+    if (this.tok_refresher) clearInterval(this.tok_refresher);
+    // Refresh the token a little bit before it expires
+    const refresh_t = this.current_tokens.expires_in * 1000 * .95;
+    this.tok_refresher = setInterval(this.refreshToken, refresh_t);
 
     promise.resolve();
   }
