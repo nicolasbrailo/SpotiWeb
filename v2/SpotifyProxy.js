@@ -65,7 +65,23 @@ export class SpotifyProxy {
   }
 
   setActiveDevice(id) {
-    return this._asyncPut('me/player', {'device_ids': [id]});
+    const done = $.Deferred();
+
+    this.getAvailableDevices().then(devs => {
+      for (let dev of devs) {
+        if (dev.id == id) {
+          if (dev.is_active) {
+            console.log("Ignoring request to activate already active device ", dev);
+          } else {
+            this._asyncPut('me/player', {'device_ids': [id]}).then(done.resolve);
+          }
+          return;
+        }
+      }
+      console.log("Ignoring request to activate unknown device ", id);
+    });
+
+    return done;
   }
 
   // Set vol from 0 to 100
@@ -108,7 +124,7 @@ export class SpotifyProxy {
   }
 
   playPause() {
-    this._asyncGet('me/player').then(player => {
+    return this._asyncGet('me/player').then(player => {
       const action = player?.is_playing? 'me/player/pause' : 'me/player/play';
       this._asyncPut(action);
     });

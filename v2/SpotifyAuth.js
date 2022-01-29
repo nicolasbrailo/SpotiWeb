@@ -137,28 +137,13 @@ export class SpotifyAuth {
            this.current_tokens.refresh_token != null;
   }
 
+  getCurrentToken = () => {
+    return this.current_tokens?.access_token;
+  }
+
   getHeader() {
-    return {'Authorization': 'Bearer ' + this.current_tokens?.access_token};
+    return {'Authorization': 'Bearer ' + this.getCurrentToken()};
   }
-
-  /*
-  // Refresh a token if possible, reauth if not
-  refreshOrReauth(uiDivId) {
-    const done = $.Deferred();
-    this.reauthIfNeeded(uiDivId).then(() => {
-      this.refreshToken(done);
-    });
-
-    return done;
-  }
-
-  // Request user to reauth if needed
-  reauthIfNeeded(uiDivId) {
-    if (this.hasValidTokens()) return $.Deferred().resolve();
-    if (this.hasAppConfig()) return this.triggerSpotifyAuthorize(uiDivId);
-    return this.triggerFullReauth(uiDivId);
-  }
-  */
 
   // Request user to reconfigure and reauth
   triggerFullReauth(uiDivId) {

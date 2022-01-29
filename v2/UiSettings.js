@@ -62,6 +62,10 @@ export class UiSettings {
     this.thingsAreBrokenCb = cb;
   }
 
+  onUserRequestedCacheRefresh(cb) {
+    this.onUserRequestedCacheRefreshCb = cb;
+  }
+
   onRecentlyPlayedCountChange(cb) {
     this.recentlyPlayedCountChange = cb;
   }
@@ -80,6 +84,11 @@ export class UiSettings {
     $('#settings_reload').click(_ => {
       console.log(`Stuff is broken, user requested reload`);
       this.thingsAreBrokenCb(false);
+    });
+
+    $('#settings_refresh_collection').click(_ => {
+      console.log(`User requested collection refresh`);
+      this.onUserRequestedCacheRefreshCb();
     });
 
     $('#settings_tileSize').change(() => {

@@ -23,11 +23,17 @@ export class CollectionManager {
       GlobalUI.notifyRequestFinished();
       this.ready.resolve();
     } else {
-      this.refreshFollowedArtists();
+      this._refreshFollowedArtists(this.ready);
     }
   }
 
   refreshFollowedArtists() {
+    const ready = $.Deferred();
+    this._refreshFollowedArtists(ready);
+    return ready;
+  }
+
+  _refreshFollowedArtists(promise) {
     console.log("Refreshing collection from Spotify");
     this.spotify.ready.then(() => {
       const interestingAttrs = ['id', 'name', 'uri', 'genres', 'images'];
@@ -48,7 +54,7 @@ export class CollectionManager {
         this.genres_index = arts.genres_index;
         this.artist_index = arts.artist_index;
         GlobalUI.notifyRequestFinished();
-        this.ready.resolve();
+        promise.resolve();
       });
     });
   }
