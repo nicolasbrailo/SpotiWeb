@@ -81,8 +81,28 @@ body {
 }
 
 #playctrls #playctrls_vol {
-  width: 140px;
+  width: 110px;
 }
+
+#playctrls .playctrls_shuffle_lbl {
+  display:inline;
+}
+
+/* Magic to change checkbox into shuffle button */
+#playctrls .playctrls_shuffle_lbl input[type='checkbox'] { display:none; }
+#playctrls .playctrls_shuffle_lbl input[type='checkbox'] + label:before {
+  font-size: 14px;
+  content: "🔀";
+  opacity: 20%;
+  display: inline;
+}
+#playctrls .playctrls_shuffle_lbl input[type='checkbox']:checked + label:before {
+  font-size: 14px;
+  content: "🔀";
+  opacity: 100%;
+  display: inline;
+}
+
 
 #playctrls #playctrls_device {
   width: 40px;

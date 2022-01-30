@@ -109,18 +109,19 @@ export class SpotifyProxy {
       return imgs[selected].url;
     };
 
-    const mogrify = playingNow => {
-      if (!playingNow?.is_playing) return null;
+    const mogrify = player_state => {
+      if (!player_state?.is_playing) return null;
       return {
-        songName: playingNow.item?.name,
-        artist: playingNow.item?.artists?.[0].name,
-        album: playingNow.item?.album?.name,
-        album_uri: playingNow.item?.album?.uri,
-        album_img: pickImg(playingNow.item?.album?.images),
+        songName: player_state.item?.name,
+        artist: player_state.item?.artists?.[0].name,
+        album: player_state.item?.album?.name,
+        album_uri: player_state.item?.album?.uri,
+        album_img: pickImg(player_state.item?.album?.images),
+        full_response: player_state,
       };
     };
 
-    return this._asyncGet('me/player/currently-playing', mogrify);
+    return this._asyncGet('me/player', mogrify);
   }
 
   playPause() {
@@ -140,6 +141,14 @@ export class SpotifyProxy {
 
   playNext() {
     return this._asyncPost('me/player/next');
+  }
+
+  setShuffleEnabled() {
+    return this._asyncPut('me/player/shuffle?state=true');
+  }
+
+  setShuffleDisabled() {
+    return this._asyncPut('me/player/shuffle?state=false');
   }
 
 

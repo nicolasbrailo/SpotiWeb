@@ -19,14 +19,14 @@ function main() {
   const tick = new UiPeriodicUpdater();
 
   // Make things public
-  window.APP_spotify;
-  window.APP_main_ui;
-  window.APP_player_ui;
-  window.APP_storage;
-  window.APP_settings;
-  window.APP_recently_played;
-  window.APP_collection_manager;
-  window.APP_tick;
+  window.APP_spotify = spotify;
+  window.APP_main_ui = main_ui;
+  window.APP_player_ui = player_ui;
+  window.APP_storage = storage;
+  window.APP_settings = settings;
+  window.APP_recently_played = recently_played;
+  window.APP_collection_manager = collection_manager;
+  window.APP_tick = tick;
 
   // No credentials? Bail out
   if (!spotify.canConnect()) {

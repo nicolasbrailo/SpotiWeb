@@ -35,6 +35,9 @@ export class UiMiniPlayerCtrl {
         playCtrls.classList.remove('somethingPlaying');
         playCtrls.classList.add('nothingPlaying');
       } else {
+        const shuffle_active = playingNow?.full_response?.shuffle_state;
+        $('#playctrls_shuffle_enabled').prop('checked', shuffle_active);
+
         playCtrls.classList.add('somethingPlaying');
         playCtrls.classList.remove('nothingPlaying');
 
@@ -61,6 +64,14 @@ export class UiMiniPlayerCtrl {
     $('#playctrls_vol').change(_ => {
       console.log("Set vol", $('#playctrls_vol').val());
       sp.setVolume($('#playctrls_vol').val());
+    });
+
+    $('#playctrls_shuffle_enabled').change(_ => {
+      if ($('#playctrls_shuffle_enabled').is(":checked")) {
+        sp.setShuffleEnabled();
+      } else {
+        sp.setShuffleDisabled();
+      }
     });
 
     $('#playctrls_prev').click(_ => { sp.playPrev().then(this.updatePlayingNow); });
