@@ -230,7 +230,7 @@ export class SpotifyAuth {
     return on_auth_complete;
   }
 
-  refreshToken(promise=null) {
+  refreshToken = (promise) => {
     console.log("Refreshing Spotify auth token");
     const done = promise? promise : $.Deferred();
     if (!this.current_tokens.refresh_token) {
