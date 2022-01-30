@@ -1,1 +1,1 @@
-python3 -m pipenv run python ./sp.py
+python3 -m http.server

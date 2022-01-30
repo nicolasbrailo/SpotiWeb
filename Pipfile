@@ -1,9 +1,0 @@
-# Pipfile.lock in gitignore to avoid problems with deployments in multiple architectures
-
-[packages]
-spotipy = {git = "https://github.com/plamere/spotipy.git"}
-flask = {index = "piwheels",version = "*"}
-requests = "*"
-
-[requires]
-python_version = "3"
