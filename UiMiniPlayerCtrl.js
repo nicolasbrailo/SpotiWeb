@@ -17,14 +17,20 @@ export class UiMiniPlayerCtrl {
   updateAvailableDevices = () => {
     this.spotify.getAvailableDevices().then(devs  => {
       $('#playctrls_device').html('');
+      let device_active = false;
       $.each(devs, (_, dev) => {
         let selected = "";
         if (dev.is_active) {
           $('#playctrls_vol').val(dev.volume_percent);
           selected = "selected";
+          device_active = true;
         }
         $('#playctrls_device').append(`<option value="${dev.id}" ${selected}>${dev.name}</option>`);
       });
+
+      if (!device_active) {
+        $('#playctrls_device').append(`<option selected>NO DEVICE SELECTED</option>`);
+      }
     });
   }
 
