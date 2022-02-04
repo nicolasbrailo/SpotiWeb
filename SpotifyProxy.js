@@ -167,9 +167,18 @@ export class SpotifyProxy {
       const this_fetch = prev_fetch.concat(res.artists.items);
       const recvd_data = (res.artists.items.length != 0);
       const has_more = (res.artists.total > this_fetch.length);
+      const has_next = !!res.artists.next;
       if (has_more && recvd_data) {
-        this.fetchFollowedArtists(this_fetch).then(promise.resolve);
+        const next_id = res.artists.next.split('&after=')[1].split('&')[0];
+        if (!next_id) {
+          console.error("Failed to parse next id from response: ", res);
+        }
+        const next_req = next_id? next_id : last_id;
+        this.fetchFollowedArtists(this_fetch, next_req).then(promise.resolve);
       } else {
+        if (has_next) {
+          console.error(res);
+        }
         promise.resolve(this_fetch);
       }
     });
