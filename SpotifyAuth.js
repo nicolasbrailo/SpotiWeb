@@ -233,14 +233,16 @@ export class SpotifyAuth {
   refreshToken = (promise) => {
     console.log("Refreshing Spotify auth token");
     const done = promise? promise : $.Deferred();
-    if (!this.current_tokens.refresh_token) {
+    if (!this.current_tokens?.refresh_token) {
       done.reject();
+      return done;
     }
 
     const req = buildSpotifyTokenRefresh(this.current_tokens.refresh_token, this.app_config);
     req.error = done.reject;
     req.success = (response, success, httpStatus) => {
       this._onSpotifyTokenReceived(done, response, success, httpStatus);
+      done.resolve();
     };
 
     $.ajax(req);

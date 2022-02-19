@@ -7,7 +7,7 @@ export class SpotifyProxy {
                 "user-modify-playback-state user-read-currently-playing " +
                 "user-read-email user-read-playback-state user-read-private";
 
-    this.auth_broken_cb = auth_broken_cb || console.error("Auth is broken, can't find tokens. Should request user token refresh.");
+    this.auth_broken_cb = auth_broken_cb || (() => { console.error("Auth is broken, can't find tokens. Should request user token refresh."); });
     this.auth = new SpotifyAuth(scope);
 
     // No credentials? Bail out
@@ -22,7 +22,7 @@ export class SpotifyProxy {
 
   // Call this if the auth token seems invalid
   requestReauth() {
-    return this.auth.refreshToken()
+    return this.auth.refreshToken();
   }
 
   _buildSpRequest(action, path, data=null) {
