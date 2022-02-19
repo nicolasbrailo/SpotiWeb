@@ -2,25 +2,27 @@ import { SpotifyAuth } from './SpotifyAuth.js';
 import { W } from './wget.js';
 
 export class SpotifyProxy {
-  constructor() {
+  constructor(auth_broken_cb) {
     const scope="app-remote-control streaming user-follow-read user-library-read " +
                 "user-modify-playback-state user-read-currently-playing " +
                 "user-read-email user-read-playback-state user-read-private";
-    this.auth = new SpotifyAuth(scope);
-    this.ready = $.Deferred();
-  }
 
-  canConnect() {
-    return this.auth.hasValidTokens();
+    this.auth_broken_cb = auth_broken_cb || console.error("Auth is broken, can't find tokens. Should request user token refresh.");
+    this.auth = new SpotifyAuth(scope);
+
+    // No credentials? Bail out
+    if (!this.auth.hasValidTokens()) {
+      this.auth_broken_cb();
+    }
   }
 
   triggerFullReauth(uiDivId) {
     return this.auth.triggerFullReauth(uiDivId);
   }
 
-  connect() {
-    this.auth.refreshToken().then(this.ready.resolve);
-    return this.ready;
+  // Call this if the auth token seems invalid
+  requestReauth() {
+    return this.auth.refreshToken()
   }
 
   _buildSpRequest(action, path, data=null) {
@@ -37,10 +39,32 @@ export class SpotifyProxy {
     };
   }
 
+  _asyncFetchDeauthRetry(promise, req, cb=null) {
+    console.log("Deauth detected, will try to refresh auth");
+    const refreshResult = this.auth.refreshToken();
+
+    refreshResult.fail(() => {
+      this.auth_broken_cb();
+      promise.reject();
+    });
+
+    refreshResult.then(() => {
+      req.error = promise.reject;
+      W.get(req);
+    });
+  }
+
   _asyncFetch(req, cb=null) {
     const promise = $.Deferred();
     req.success = msg => { promise.resolve(cb? cb(msg) : msg) };
-    req.error = promise.reject;
+    req.error = (err) => {
+      if (err.status == 401) {
+        this._asyncFetchDeauthRetry(promise, req, cb);
+        return;
+      }
+
+      promise.reject();
+    };
     W.get(req);
     return promise;
   }

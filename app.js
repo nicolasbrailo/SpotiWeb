@@ -9,7 +9,9 @@ import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
 import { UiSettings } from './UiSettings.js';
 
 function main() {
-  const spotify = new SpotifyProxy();
+  const when_auth_broken = () => { window.location = '/reauth.html'; };
+
+  const spotify = new SpotifyProxy(when_auth_broken);
   const main_ui = new UiBuilder();
   const player_ui = new UiMiniPlayerCtrl(spotify);
   const storage = new LocalStorageManager();
@@ -27,12 +29,6 @@ function main() {
   window.APP_recently_played = recently_played;
   window.APP_collection_manager = collection_manager;
   window.APP_tick = tick;
-
-  // No credentials? Bail out
-  if (!spotify.canConnect()) {
-    window.location = '/reauth.html';
-    return;
-  }
 
   // Interface with outside world events
   const ui_became_ready = $.Deferred();
@@ -106,7 +102,7 @@ function main() {
     player_ui.notifyUILoaded();
   });
 
-  Promise.all([ui_became_ready, spotify.connect()]).then(() => {
+  Promise.all([ui_became_ready, spotify.requestReauth()]).then(() => {
     tick.installCallback(_ => { player_ui.onTick(); }, 10 * 1000);
   });
 

@@ -26,7 +26,8 @@ export class SpotifyLocalPlayer {
     });
 
     this.player.addListener('authentication_error', ({ message }) => {
-        console.error(message);
+      console.log("Auth token seems expired, will request new one");
+      spotify.requestReauth().then(this.player.connect);
     });
 
     this.player.addListener('account_error', ({ message }) => {
