@@ -1,4 +1,5 @@
 import { SpotifyAuth } from './SpotifyAuth.js';
+import { GlobalUI } from './UiGlobal.js';
 import { W } from './wget.js';
 
 export class SpotifyProxy {
@@ -9,6 +10,7 @@ export class SpotifyProxy {
 
     this.auth_broken_cb = auth_broken_cb || (() => { console.error("Auth is broken, can't find tokens. Should request user token refresh."); });
     this.auth = new SpotifyAuth(scope);
+    this.default_player_id = null;
 
     // No credentials? Bail out
     if (!this.auth.hasValidTokens()) {
@@ -25,6 +27,10 @@ export class SpotifyProxy {
     return this.auth.refreshToken();
   }
 
+  setDefaultPlayerId(id) {
+    this.default_player_id = id;
+  }
+
   _buildSpRequest(action, path, data=null) {
     return {
         type: action,
@@ -39,7 +45,7 @@ export class SpotifyProxy {
     };
   }
 
-  _asyncFetchDeauthRetry(promise, req, cb=null) {
+  _asyncFetchDeauthRetry(promise, req) {
     console.log("Deauth detected, will try to refresh auth");
     const refreshResult = this.auth.refreshToken();
 
@@ -54,18 +60,46 @@ export class SpotifyProxy {
     });
   }
 
+  _asyncFetchNoActiveDeviceRetry(promise, req) {
+    if (!this.default_player_id) {
+      GlobalUI.showErrorUi("No active device");
+      promise.reject();
+      return;
+    }
+
+    console.log("Trying to activate default device...");
+    const activate = this._asyncPut('me/player', {'device_ids': [this.default_player_id]});
+
+    activate.fail(() => {
+      GlobalUI.showErrorUi("No active device and failed to activate default device");
+      promise.reject();
+    });
+
+    activate.then(() => {
+      req.error = promise.reject;
+      W.get(req);
+    });
+  }
+
   _asyncFetch(req, cb=null) {
     const promise = $.Deferred();
     req.success = msg => { promise.resolve(cb? cb(msg) : msg) };
     req.error = (err) => {
       if (err.status == 401) {
-        this._asyncFetchDeauthRetry(promise, req, cb);
+        this._asyncFetchDeauthRetry(promise, req);
         return;
       }
 
+      if (err.status == 404 && err?.responseJSON?.error?.reason == "NO_ACTIVE_DEVICE") {
+        this._asyncFetchNoActiveDeviceRetry(promise, req, cb);
+        return;
+      }
+
+      console.error("SpotifyProxy error:", err);
+      GlobalUI.showErrorUi(JSON.stringify(err.responseJSON));
       promise.reject();
     };
-    W.get(req);
+    W.get(req, false);
     return promise;
   }
 
