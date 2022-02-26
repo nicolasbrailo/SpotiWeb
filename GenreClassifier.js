@@ -194,6 +194,39 @@ function groupUncategorized(maybe_uncategorized, all_arts, all_genres) {
   return all_genres;
 }
 
+function guessGroupFromStrings(use_fuzzy_match, gen_idx, arts_idx) {
+  // Don't relly on these common words when fuzzy matching
+  const fuzzy_blocklist = ['dark', 'wave', 'indie'];
+
+  for (let art_name of gen_idx.misc) {
+    let strings = art_name.split(/[\s,-]+/);
+    for (let gen of arts_idx[art_name].genres) {
+      strings = strings.concat(gen.split(/[\s,-]+/));
+    }
+
+    (() => {
+      for (let gen of Object.keys(gen_idx)) {
+        for (let k of strings) {
+          let match = false;
+          if (use_fuzzy_match) {
+            match = ((k.length > 3) && (!fuzzy_blocklist.includes(k)) && gen.includes(k));
+          } else {
+            match = (gen == k);
+          }
+
+          if (match) {
+            gen_idx[gen].push(art_name);
+            gen_idx.misc.splice(gen_idx.misc.indexOf(art_name), 1);
+            return;
+          }
+        }
+      }
+    })();
+  }
+
+  return gen_idx;
+}
+
 function sortGroups(l) {
   let sorted = {};
   for (let k of Object.keys(l)) {
@@ -202,8 +235,9 @@ function sortGroups(l) {
   return sorted;
 }
 
-const SIMILARITY_THRESHOLD = .8;
-const GROUP_IS_SMALL_THRESHOLD = 5;
+const SIMILARITY_THRESHOLD = .9;
+const GROUP_IS_SMALL_THRESHOLD = 4;
+const GROUP_IS_SMALL_SECOND_STEP_THRESHOLD = 8;
 
 export function groupAndIndexGenres(raw_arts) {
   console.log("Generating indexes");
@@ -214,13 +248,39 @@ export function groupAndIndexGenres(raw_arts) {
   const g1 = mergeSimilarGroups(SIMILARITY_THRESHOLD, gens_idx);
   const g2 = mergeSmallGroups(GROUP_IS_SMALL_THRESHOLD, g1, arts_idx);
   const g3 = groupUncategorized(g2.uncategorized, arts_idx, g2.genres);
-  const g4 = sortGroups(g3);
-  console.log(`Finished: Have ${Object.keys(g4).length} genres and ${g4.misc?.length} uncategorized artists.`);
+  const g4 = guessGroupFromStrings(false, g3, arts_idx);
+  const g5 = guessGroupFromStrings(true, g4, arts_idx);
+
+  const g6 = mergeSmallGroups(GROUP_IS_SMALL_SECOND_STEP_THRESHOLD, g5, arts_idx);
+  for (let k of Object.keys(g6.uncategorized)) {
+    g6.genres[k] = g6.uncategorized[k];
+  }
+  const lst = sortGroups(g6.genres);
+  console.log(`Finished: Have ${Object.keys(lst).length} genres and ${lst.misc?.length} uncategorized artists.`);
 
   return {
     artist_index: arts_idx,
-    genres_index: g4,
+    genres_index: lst,
   };
 }
 
+export function getInterestingAttrsFromSpotifyArtistList(spotifyArtList) {
+  function getInterestingAttrsFromSpotifyArtist(spotifyArt) {
+    const interestingAttrs = ['id', 'name', 'uri', 'genres', 'images'];
+    const obj = {};
+    for (let attr of interestingAttrs) {
+      obj[attr] = spotifyArt[attr];
+    }
+    return obj;
+  }
 
+  return spotifyArtList.map(getInterestingAttrsFromSpotifyArtist);
+}
+
+window.getInterestingAttrsFromSpotifyArtistList = getInterestingAttrsFromSpotifyArtistList;
+window.groupAndIndexGenres = groupAndIndexGenres;
+window.foobar = () => {
+  window.rawlst = JSON.parse(localStorage.fullArtLst);
+  window.rawlst = getInterestingAttrsFromSpotifyArtistList(rawlst)
+  window.arts = groupAndIndexGenres(rawlst);
+};

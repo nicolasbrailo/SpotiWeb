@@ -1,5 +1,5 @@
 import { GlobalUI } from './UiGlobal.js';
-import { groupAndIndexGenres } from './GenreClassifier.js';
+import { groupAndIndexGenres, getInterestingAttrsFromSpotifyArtistList } from './GenreClassifier.js';
 
 export class CollectionManager {
   FOLLOWED_ARTISTS_STORAGE_KEY = "FOLLOWED_ARTISTS_STORAGE_KEY";
@@ -36,18 +36,9 @@ export class CollectionManager {
   _refreshFollowedArtists(promise) {
     console.log("Refreshing collection from Spotify");
     this.spotify.ready.then(() => {
-      const interestingAttrs = ['id', 'name', 'uri', 'genres', 'images'];
-      const getInterestingAttrsFromSpotifyArtist = art => {
-        const obj = {};
-        for (let attr of interestingAttrs) {
-          obj[attr] = art[attr];
-        }
-        return obj;
-      };
-
       this.spotify.fetchFollowedArtists().then(lst => {
         console.log("Retrieved full followed artist list");
-        const raw_arts = lst.map(getInterestingAttrsFromSpotifyArtist);
+        const raw_arts = getInterestingAttrsFromSpotifyArtistList(lst);
         console.log("Transmogrifying artist list");
         const arts = groupAndIndexGenres(raw_arts);
         this.storage.save(this.FOLLOWED_ARTISTS_STORAGE_KEY, arts);

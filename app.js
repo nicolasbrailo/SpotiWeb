@@ -109,7 +109,8 @@ function main() {
     player_ui.notifyUILoaded();
   });
 
-  Promise.all([ui_became_ready, spotify.requestReauth()]).then(() => {
+  spotify.requestReauth();
+  Promise.all([ui_became_ready, spotify.ready]).then(() => {
     console.log("App ready");
     tick.installCallback(_ => { player_ui.onTick(); }, 10 * 1000);
   });

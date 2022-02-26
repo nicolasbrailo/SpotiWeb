@@ -11,6 +11,7 @@ export class SpotifyProxy {
     this.auth_broken_cb = auth_broken_cb || (() => { console.error("Auth is broken, can't find tokens. Should request user token refresh."); });
     this.auth = new SpotifyAuth(scope);
     this.default_player_id = null;
+    this.ready = $.Deferred();
 
     // No credentials? Bail out
     if (!this.auth.hasValidTokens()) {
@@ -24,7 +25,7 @@ export class SpotifyProxy {
 
   // Call this if the auth token seems invalid
   requestReauth() {
-    return this.auth.refreshToken();
+    return this.auth.refreshToken().then(this.ready.resolve);
   }
 
   setDefaultPlayerId(id) {
