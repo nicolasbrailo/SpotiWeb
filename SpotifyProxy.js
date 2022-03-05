@@ -11,6 +11,8 @@ export class SpotifyProxy {
     this.auth_broken_cb = auth_broken_cb || (() => { console.error("Auth is broken, can't find tokens. Should request user token refresh."); });
     this.auth = new SpotifyAuth(scope);
     this.default_player_id = null;
+    this.local_player = null;
+    this.active_player_id = null;
     this.ready = $.Deferred();
 
     // No credentials? Bail out
@@ -28,8 +30,16 @@ export class SpotifyProxy {
     return this.auth.refreshToken().then(this.ready.resolve);
   }
 
+  setLocalPlayer(localPlayer) {
+    this.local_player = localPlayer;
+  }
+
   setDefaultPlayerId(id) {
     this.default_player_id = id;
+  }
+
+  usingLocal() {
+    return (this.active_player_id != null) && (this.local_player?.device_id == this.active_player_id);
   }
 
   _buildSpRequest(action, path, data=null) {
@@ -132,6 +142,7 @@ export class SpotifyProxy {
           if (dev.is_active) {
             console.log("Ignoring request to activate already active device ", dev);
           } else {
+            this.active_player_id = id;
             this._asyncPut('me/player', {'device_ids': [id]}).then(done.resolve);
           }
           return;
@@ -145,6 +156,11 @@ export class SpotifyProxy {
 
   // Set vol from 0 to 100
   setVolume(pct) {
+    if (this.usingLocal()) {
+      this.local_player.player.setVolume(pct / 100.0);
+      return $.Deferred().resolve();
+    }
+
     return this._asyncPut('me/player/volume?volume_percent=' + pct, {'volume_percent': pct});
   }
 
@@ -184,6 +200,11 @@ export class SpotifyProxy {
   }
 
   playPause() {
+    if (this.usingLocal()) {
+      this.local_player.player.togglePlay();
+      return $.Deferred().resolve();
+    }
+
     return this._asyncGet('me/player').then(player => {
       const action = player?.is_playing? 'me/player/pause' : 'me/player/play';
       this._asyncPut(action);
@@ -195,10 +216,20 @@ export class SpotifyProxy {
   }
 
   playPrev() {
+    if (this.usingLocal()) {
+      this.local_player.player.previousTrack();
+      return $.Deferred().resolve();
+    }
+
     return this._asyncPost('me/player/previous');
   }
 
   playNext() {
+    if (this.usingLocal()) {
+      this.local_player.player.nextTrack();
+      return $.Deferred().resolve();
+    }
+
     return this._asyncPost('me/player/next');
   }
 

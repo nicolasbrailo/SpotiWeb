@@ -51,14 +51,13 @@ function main() {
 
   function createLocalSpotifyClient() {
     const spotify_local_player = new SpotifyLocalPlayer('Spotiwebos', storage, spotify);
-    // TODO: Bypass remote API maybe faster? spotify.setLocalPlayer(spotify_local_player);
 
     // Make it globally available
     window.APP_player = spotify_local_player;
 
     spotify_local_player.ready.then(() => {
       player_ui.updateAvailableDevices();
-      // TODO: Configurable?
+      spotify.setLocalPlayer(spotify_local_player);
       spotify.setDefaultPlayerId(spotify_local_player.device_id);
       console.log("This client is now the default player")
     });

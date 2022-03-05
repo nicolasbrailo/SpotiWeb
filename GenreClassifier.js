@@ -276,11 +276,3 @@ export function getInterestingAttrsFromSpotifyArtistList(spotifyArtList) {
 
   return spotifyArtList.map(getInterestingAttrsFromSpotifyArtist);
 }
-
-window.getInterestingAttrsFromSpotifyArtistList = getInterestingAttrsFromSpotifyArtistList;
-window.groupAndIndexGenres = groupAndIndexGenres;
-window.foobar = () => {
-  window.rawlst = JSON.parse(localStorage.fullArtLst);
-  window.rawlst = getInterestingAttrsFromSpotifyArtistList(rawlst)
-  window.arts = groupAndIndexGenres(rawlst);
-};

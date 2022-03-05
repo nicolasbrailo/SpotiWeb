@@ -1,4 +1,18 @@
 
+window.foo = (l, art, max=5) => {
+    const newLastPlayed = l.reverse().filter(x => x != art);
+
+    if (art != null) {
+      newLastPlayed.push(art);
+    }
+
+    while (newLastPlayed.length > max) {
+      newLastPlayed.shift();
+    }
+
+    return newLastPlayed.reverse();
+}
+
 export class RecentlyPlayed {
   constructor(storage, maxEntries) {
     this.storage = storage;
@@ -12,21 +26,25 @@ export class RecentlyPlayed {
     this.add(null);
   }
 
-  get() {
+  _get() {
     var lastPlayed = this.storage.get('lastPlayed', []);
     if (!Array.isArray(lastPlayed)) return [];
-    return lastPlayed.reverse();
+    return lastPlayed;
+  }
+
+  get() {
+    return this._get().reverse();
   }
 
   add(art) {
-    var newLastPlayed = this.get().filter(x => x != art);
+    const newLastPlayed = this._get().filter(x => x != art);
 
     if (art != null) {
       newLastPlayed.push(art);
     }
 
-    if (newLastPlayed.length > this.maxEntries) {
-      newLastPlayed = newLastPlayed.slice(1, this.maxEntries + 1);
+    while (newLastPlayed.length > this.maxEntries) {
+      newLastPlayed.shift();
     }
 
     this.storage.save('lastPlayed', newLastPlayed);
