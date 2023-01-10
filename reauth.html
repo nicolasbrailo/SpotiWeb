@@ -16,7 +16,7 @@ import { SpotifyProxy } from './SpotifyProxy.js';
 document.addEventListener('DOMContentLoaded', _ => {
   const auth = new SpotifyProxy();
   auth.triggerFullReauth('spotifyAuth').then(() => {
-    window.location = '/';
+    window.location = 'index.html';
   });
 });
 </script>
