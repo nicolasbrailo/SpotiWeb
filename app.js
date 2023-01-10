@@ -9,7 +9,7 @@ import { UiPeriodicUpdater } from './UiPeriodicUpdater.js';
 import { UiSettings } from './UiSettings.js';
 
 function main() {
-  const when_auth_broken = () => { window.location = '/reauth.html'; };
+  const when_auth_broken = () => { window.location = 'reauth.html'; };
 
   const spotify = new SpotifyProxy(when_auth_broken);
   const main_ui = new UiBuilder();
