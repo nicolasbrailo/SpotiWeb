@@ -4,10 +4,12 @@
 
 Once your Spotify list of artists becomes too large to manage, you can use Spotify classifier to automatically go through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. spotify_classifier will offer a simple web page with an index of all the artists you followed, groupped by somewhat logical categories.
 
-This is a self-hosted service: it requires an API key for Spotify, and you need to host it yourself (ie just run it in your computer).
+~This is a self-hosted service: it requires an API key for Spotify, and you need to host it yourself (ie just run it in your computer).~
+
+You can use this service from https://nicolasbrailo.github.io/sppl - you will need a developer API key+secret. All the storage is local to your browser (there is no key, user data or anything at all being sent to any external host, everything is done in your browser) and you can even use this client offline (Spotify won't work offline, though). You can also self-host this service, either by forking the project or by running it via a local webserver.
 
 
-## Running
+## Running locally
 
 Prerequisite: you'll need to create API keys for your Spotify account at developer.spotify.com. This may only work with paid subscriptions.
 
