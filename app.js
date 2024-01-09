@@ -43,7 +43,7 @@ function main() {
   }
 
   function rebuildMainUi() {
-    main_ui.setCollection(collection_manager.genres_index, collection_manager.artist_index);
+    main_ui.setCollection(collection_manager.genresIndex, collection_manager.artistIndex);
     $('#genres_idx').html(main_ui.buildGenresIndex());
     $('#arts_by_gen').html(main_ui.buildAllGenres());
     rebuildRecentPlayed();

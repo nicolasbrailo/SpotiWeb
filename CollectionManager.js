@@ -10,19 +10,35 @@ export class CollectionManager {
     this.ready = $.Deferred();
 
     GlobalUI.notifyNewRequestOnFlight();
+
+    this.artistIndex = null;
+    this.genresIndex = null;
     const cache = this.storage.get(this.FOLLOWED_ARTISTS_STORAGE_KEY);
-    this.genres_index = cache?.genres_index;
-    this.artist_index = cache?.artist_index;
+    if (cache && cache.artistIndex) {
+      try {
+        this.artistIndex = new Map(JSON.parse(cache.artistIndex));
+      } catch (e) {
+        console.log("Cached artist index isn't valid");
+      }
+    }
+    if (cache && cache.genresIndex) {
+      try {
+        this.genresIndex = new Map(JSON.parse(cache.genresIndex));
+      } catch (e) {
+        console.log("Cached genre index isn't valid");
+      }
+    }
 
     let valid_cache = true;
-    valid_cache &= this.genres_index && Object.keys(this.genres_index).length > 0;
-    valid_cache &= this.artist_index && Object.keys(this.artist_index).length > 0;
+    valid_cache &= this.genresIndex && this.genresIndex.size > 0;
+    valid_cache &= this.artistIndex && this.artistIndex.size > 0;
 
     if (valid_cache) {
       console.log("Got collection from cache");
       GlobalUI.notifyRequestFinished();
       this.ready.resolve();
     } else {
+      console.log("Collection from cache is not valid, reload collection");
       this._refreshFollowedArtists(this.ready);
     }
   }
@@ -37,13 +53,18 @@ export class CollectionManager {
     console.log("Refreshing collection from Spotify");
     this.spotify.ready.then(() => {
       this.spotify.fetchFollowedArtists().then(lst => {
-        console.log("Retrieved full followed artist list");
+        console.log("Retrieved full followed artist list, got", lst.length, "artists");
         const raw_arts = getInterestingAttrsFromSpotifyArtistList(lst);
-        console.log("Transmogrifying artist list");
+        console.log("Transmogrifying artist list, have", raw_arts.length, "artists");
         const arts = groupAndIndexGenres(raw_arts);
-        this.storage.save(this.FOLLOWED_ARTISTS_STORAGE_KEY, arts);
-        this.genres_index = arts.genres_index;
-        this.artist_index = arts.artist_index;
+        this.genresIndex = arts.genresIndex;
+        this.artistIndex = arts.artistIndex;
+
+        const serializedArts = arts;
+        serializedArts.artistIndex = JSON.stringify(Array.from(arts.artistIndex.entries()));
+        serializedArts.genresIndex = JSON.stringify(Array.from(arts.genresIndex.entries()));
+        this.storage.save(this.FOLLOWED_ARTISTS_STORAGE_KEY, serializedArts);
+
         GlobalUI.notifyRequestFinished();
         promise.resolve();
       });

@@ -65,9 +65,9 @@ export class UiBuilder {
       console.error("This is a singleton, weird things may happen if you instanciate twice");
     }
 
-    this.collection = {};
     this.genres = [];
-    this.artists_index = {};
+    this.genreIndex = new Map();
+    this.artistIndex = new Map();
 
     this.onArtistClickedCb = console.log;
     this.onArtistExpandClickedCb = console.log;
@@ -83,10 +83,10 @@ export class UiBuilder {
     UiBuilder.self = this;
   }
 
-  setCollection(collection, artists_index) {
-    this.collection = collection;
-    this.genres = Object.keys(this.collection).sort();
-    this.artists_index = artists_index;
+  setCollection(genreIndex, artistIndex) {
+    this.genreIndex = genreIndex;
+    this.artistIndex = artistIndex;
+    this.genres = Array.from(genreIndex.keys()).sort();
   }
 
   buildRecentlyPlayed(recently_played) {
@@ -106,7 +106,7 @@ export class UiBuilder {
     }
 
     const buildSingleGenre = (gen) => {
-      const genre_body = buildArtistGroup(this.collection[gen])
+      const genre_body = buildArtistGroup(this.genreIndex.get(gen))
       return `<h2 id='${buildGenreHref(gen)}'>${gen}</h2>` + genre_body;
     }
 
@@ -114,7 +114,7 @@ export class UiBuilder {
   }
 
   buildArtistTile = (art_name) => {
-    const art_info = this.artists_index[art_name];
+    const art_info = this.artistIndex.get(art_name);
     const unique_id = this.art_tile_unique_id++;
     if (!art_info) {
       return `<li><img src="${NO_KNOWN_IMAGE}"/>${art_name}</li>`;
@@ -138,17 +138,17 @@ export class UiBuilder {
 
   // Event trampolines
   static trampolineOnAlbumClicked(art_name, album_uri) {
-    const art_obj = UiBuilder.self.artists_index[art_name];
+    const art_obj = UiBuilder.self.artistIndex.get(art_name);
     UiBuilder.self.onAlbumClickedCb(art_obj, album_uri);
   }
 
   static trampolineToggleArtistExtendedView(tile_id, art_name) {
-    const art_obj = UiBuilder.self.artists_index[art_name];
+    const art_obj = UiBuilder.self.artistIndex.get(art_name);
     UiBuilder.self.onArtistExpandClickedCb(tile_id, art_obj);
   }
 
   static trampolineOnArtistClicked(art_name) {
-    const art_obj = UiBuilder.self.artists_index[art_name];
+    const art_obj = UiBuilder.self.artistIndex.get(art_name);
     UiBuilder.self.onArtistClickedCb(art_obj);
   }
 

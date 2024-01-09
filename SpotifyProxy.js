@@ -246,30 +246,28 @@ export class SpotifyProxy {
     return this._asyncGet('me/following?type=artist&limit=42', o => o.artists.items);
   }
 
-  fetchFollowedArtists(prev_fetch=[]) {
-    const promise = $.Deferred();
-
-    const last_id = prev_fetch[prev_fetch.length-1]?.id;
-    const this_fetch_start = last_id? `&after=${last_id}` : '';
-    const fetch_path = `me/following?type=artist&limit=50${this_fetch_start}`;
-
-    this._asyncGet(fetch_path).then( res => {
-      const this_fetch = prev_fetch.concat(res.artists.items);
-      const recvd_data = (res.artists.items.length != 0);
-      const has_more = (res.artists.total > this_fetch.length);
-      const has_next = !!res.artists.next;
-      if (has_more && recvd_data) {
-        const next_id = res.artists.next.split('&after=')[1].split('&')[0];
-        if (!next_id) {
-          console.error("Failed to parse next id from response: ", res);
+  fetchFollowedArtists(fetchUrl=null, parentPromise=null, artists=null) {
+    const promise = parentPromise? parentPromise : $.Deferred();
+    const url = fetchUrl? fetchUrl : 'me/following?type=artist&limit=50';
+    console.log("Refreshing artist list, request to ", url);
+    this._asyncGet(url).then( res => {
+      console.log("Refreshing artist list, received response", res);
+      const nextArtists = artists? artists.concat(res.artists.items) : res.artists.items;
+      if (res.artists.next) {
+        const expectedPrefix = 'https://api.spotify.com/v1/';
+        if (!res.artists.next.startsWith(expectedPrefix)) {
+          console.log("Can't parse request to fetch artists, expected next request to have prefix", expectedPrefix, " but received URL is", res.artists.next)
+          promise.reject();
         }
-        const next_req = next_id? next_id : last_id;
-        this.fetchFollowedArtists(this_fetch, next_req).then(promise.resolve);
+
+        const nextUrl = res.artists.next.substr(expectedPrefix.length);
+        this.fetchFollowedArtists(nextUrl, promise, nextArtists);
       } else {
-        if (has_next) {
-          console.error(res);
+        if (res.artists.total != nextArtists.length) {
+          console.warning("Bad length: expected to get", res.artists.total, "artists, but received", nextArtists.length);
         }
-        promise.resolve(this_fetch);
+        console.log("Received updated artists list:", nextArtists);
+        promise.resolve(nextArtists);
       }
     });
     return promise;
