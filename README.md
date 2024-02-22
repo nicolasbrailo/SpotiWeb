@@ -1,12 +1,10 @@
-# spotify_classifier
+# SpotiWeb
 
-~Browse Spotify artists groupped by genre.~ Alt web client for Spotify.
+Alt web client for Spotify.
 
-Once your Spotify list of artists becomes too large to manage, you can use Spotify classifier to automatically go through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. spotify_classifier will offer a simple web page with an index of all the artists you followed, groupped by somewhat logical categories.
+If you find the native client for Spotify is too cluttered, SpotiWeb can provide a simpler experience. SpotiWeb automatically goes through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. The result will be a simple web page with an index of all the artists you followed, groupped by somewhat logical categories.
 
-~This is a self-hosted service: it requires an API key for Spotify, and you need to host it yourself (ie just run it in your computer).~
-
-You can use this service from https://nicolasbrailo.github.io/sppl - you will need a developer API key+secret. All the storage is local to your browser (there is no key, user data or anything at all being sent to any external host, everything is done in your browser) and you can even use this client offline (Spotify won't work offline, though). You can also self-host this service, either by forking the project or by running it via a local webserver.
+You can use this service from https://nicolasbrailo.github.io/SpotiWeb/ - you will need a developer API key+secret. All the storage is local to your browser (there is no key, user data or anything at all being sent to any external host, everything is done in your browser) and you can even use this client offline (Spotify won't work offline, though). You can also self-host this service, either by forking the project or by running it via a local webserver.
 
 
 ## Running locally
@@ -30,6 +28,4 @@ Spotify classifier doesn't use any clever algorithms to determine the grouppings
 The algorithm isn't particularly smart, and isn't even stable (the result will depend on the order of application of the rules - so you may get different results in different runs!)
 
 For 'small' issues, you may define custom rules in config.json; here you can define a list of subgenres that should be merged to a parent genre. If there is a similarity rule this service doesn't exploit, you may define your own merge rules by extending the GenreMerger class. PRs welcome!
-
-
 
