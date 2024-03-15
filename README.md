@@ -2,7 +2,9 @@
 
 Alt web client for Spotify.
 
-If you find the native client for Spotify is too cluttered, SpotiWeb can provide a simpler experience. SpotiWeb automatically goes through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. The result will be a simple web page with an index of all the artists you followed, groupped by somewhat logical categories.
+If you find the native client for Spotify is too cluttered, SpotiWeb can provide a simpler experience. SpotiWeb automatically goes through the list of your followed artists to create an index groupped by category. The categories will be automatically determined based on the artists you follow. The result will be a simple web page with an index of all the artists you followed, groupped by somewhat logical categories (when categories exist).
+
+![SpotiWeb running looks like this](./screenshot.png)
 
 You can use this service from https://nicolasbrailo.github.io/SpotiWeb/ - you will need a developer API key+secret. All the storage is local to your browser (there is no key, user data or anything at all being sent to any external host, everything is done in your browser) and you can even use this client offline (Spotify won't work offline, though). You can also self-host this service, either by forking the project or by running it via a local webserver.
 
